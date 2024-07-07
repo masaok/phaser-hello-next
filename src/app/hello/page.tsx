@@ -3,8 +3,8 @@
  */
 
 import dynamic from 'next/dynamic'
-// import HelloGame from '@/games/HelloGame'
 
+// This fixes "Error: HTMLVideoElement is not defined"
 const HelloGame = dynamic(() => import('../../games/HelloGame'), {
   ssr: false,
 })
