@@ -1,9 +1,9 @@
-import dynamic from "next/dynamic";
+import dynamic from 'next/dynamic'
 
 // import PhaserGame from "@/games/PhaserGame";
-const PhaserGame = dynamic(() => import("../games/PhaserGame"), {
+const PhaserGame = dynamic(() => import('../games/PhaserGame'), {
   ssr: false,
-});
+})
 
 export default function Home() {
   return (
@@ -15,5 +15,5 @@ export default function Home() {
         <PhaserGame />
       </main>
     </div>
-  );
+  )
 }
