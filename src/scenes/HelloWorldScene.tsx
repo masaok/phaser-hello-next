@@ -1,7 +1,7 @@
 // src/phaser/scene.ts
-import Phaser from 'phaser'
+import { Scene } from 'phaser'
 
-class HelloWorldScene extends Phaser.Scene {
+class HelloWorldScene extends Scene {
   constructor() {
     super('hello-world')
   }
