@@ -19,14 +19,8 @@ const TheGame: React.FC = () => {
       width: window.innerWidth,
       height: window.innerHeight,
       scene: TheScene,
-      backgroundColor: '#0072bc',
-      parent: 'phaser-container', // required to match div id
-      physics: {
-        default: 'arcade',
-        arcade: {
-          debug: true,
-        },
-      },
+      // backgroundColor: '#0072bc',
+      parent: 'phaser-container',
     }
 
     const game = new Game(config)
