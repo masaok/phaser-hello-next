@@ -18,12 +18,11 @@ class PhaserLogoScene extends Scene {
     // this.add.image(400, 300, 'sky')
     // this.add.image(window.innerWidth / 2, window.innerHeight / 2, 'sky')
 
-    const sky = this.physics.add.image(0, 0, 'sky').setOrigin(0, 0) as Phaser.Physics.Arcade.Image
+    const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0) as Phaser.Physics.Arcade.Image
     const scaleX = this.cameras.main.width / sky.width
     const scaleY = this.cameras.main.height / sky.height
     const scale = Math.max(scaleX, scaleY)
     sky.setScale(scale)
-    // sky.setGravity(0, 0)
 
     const particles = this.add.particles(0, 0, 'red', {
       speed: 100,
