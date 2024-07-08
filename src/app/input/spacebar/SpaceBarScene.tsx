@@ -32,7 +32,7 @@ class SpaceBarScene extends Scene {
     //  Emits only when the SPACE BAR is pressed down, and dispatches from the local Key object.
     //  You can call stopPropagation at this level, which will stop it reaching both listeners below.
 
-    spaceKey?.on('down', (key: any, event: any) => {
+    spaceKey?.on('down', (key: Phaser.Input.Keyboard.Key, event: KeyboardEvent) => {
       // event.stopPropagation();
 
       bubble3.setVisible(true)
@@ -42,7 +42,7 @@ class SpaceBarScene extends Scene {
     //  Emits only on the SPACE BAR keycode event, but dispatches globally.
     //  You can call stopPropagation at this level, which will stop it reaching the listener below.
 
-    this.input.keyboard?.on('keydown-SPACE', (event: any) => {
+    this.input.keyboard?.on('keydown-SPACE', (event: KeyboardEvent) => {
       event.stopPropagation()
 
       bubble2.setVisible(true)
@@ -51,7 +51,7 @@ class SpaceBarScene extends Scene {
     //  Phase 3: Global keydown handler.
     //  Fires on ANY key press, so we need to check the keyCode internally.
 
-    this.input.keyboard?.on('keydown', (event: any) => {
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       if (event.keyCode === Phaser.Input.Keyboard.KeyCodes.SPACE) {
         bubble1.setVisible(true)
       }

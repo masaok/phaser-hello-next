@@ -29,7 +29,7 @@ class TheScene extends Scene {
 
     this.input.on(
       'pointerdown',
-      (pointer: any) => {
+      (pointer: Phaser.Input.Pointer) => {
         if (pointer.rightButtonDown()) {
           if (pointer.getDuration() > 500) {
             this.add.image(pointer.x, pointer.y, 'disk')
