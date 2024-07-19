@@ -4,7 +4,7 @@ import Generator from '../gameobjects/generator'
 export default class Game extends Phaser.Scene {
   player: Phaser.Physics.Arcade.Sprite | null
   score: number
-  scoreText: Phaser.GameObjects.Text | null
+  scoreText: Phaser.GameObjects.BitmapText | null
   name: string
   number: number
 
@@ -18,7 +18,10 @@ export default class Game extends Phaser.Scene {
   generator: Generator | null
 
   SPACE: Phaser.Input.Keyboard.Key | undefined
-  player: Player | null
+  updateScoreEvent: Phaser.Time.TimerEvent | undefined
+  audios: { [key: string]: Phaser.Sound.NoAudioSound | Phaser.Sound.HTML5AudioSound | Phaser.Sound.WebAudioSound }
+  theme: Phaser.Sound.NoAudioSound | Phaser.Sound.HTML5AudioSound | Phaser.Sound.WebAudioSound | null
+  jumpTween: Phaser.Tweens.Tween | undefined
 
   constructor() {
     super({ key: 'game' })
@@ -37,8 +40,9 @@ export default class Game extends Phaser.Scene {
     this.coins = null
     this.generator = null
 
-    this.SPACE = undefined
-    this.player = null
+    this.scoreText = null
+    this.audios = {}
+    this.theme = null
   }
 
   init(data: { name: string; number: number }) {
@@ -87,7 +91,7 @@ between the player and the coins. The key part there is to set a function that w
     this.generator = new Generator(this)
     this.SPACE = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.player = new Player(this, this.center_width - 100, this.height - 200)
-    this.scoreText = this.add.bitmapText(this.center_width, 10, 'arcade', this.score, 20)
+    this.scoreText = this.add.bitmapText(this.center_width, 10, 'arcade', this.score.toString(), 20)
 
     this.physics.add.collider(
       this.player,
@@ -115,7 +119,7 @@ between the player and the coins. The key part there is to set a function that w
     /*
     We use the `pointerdown` event to listen to the mouse click or touch event.
     */
-    this.input.on('pointerdown', pointer => this.jump(), this)
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.jump(), this)
 
     /*
     We use `updateScoreEvent` to update the score every 100ms so the player can see the score increasing as long as he survives.
@@ -128,30 +132,39 @@ between the player and the coins. The key part there is to set a function that w
     })
   }
 
-  /*
-This method is called when the player hits an obstacle. We stop the updateScoreEvent so the score doesn't increase anymore.
+  /**
+   * This method is called when the player hits an obstacle. We stop the updateScoreEvent so the score doesn't increase anymore.
+   * And obviously, we finish the scene.
+   */
+  // hitObstacle(player: Phaser.Physics.Arcade.Sprite, obstacle: Phaser.GameObjects.GameObject) {
+  //   this.updateScoreEvent?.destroy()
+  //   this.finishScene()
+  // }
 
-And obviously, we finish the scene.
-*/
-  hitObstacle(player, obstacle) {
-    this.updateScoreEvent.destroy()
+  hitObstacle(
+    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    obstacle: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+  ) {
+    this.updateScoreEvent?.destroy()
     this.finishScene()
   }
 
   /*
 This method is called when the player hits a coin. We play a sound, update the score, and destroy the coin.
 */
-  hitCoin(player, coin) {
+  hitCoin(
+    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    coin: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+  ) {
     this.playAudio('coin')
     this.updateScore(1000)
     coin.destroy()
   }
 
-  /*
-We use this `loadAudios` method to load all the audio files that we need for the game.
-
-Then we'll play them using the `playAudio` method.
-*/
+  /**
+   * We use this `loadAudios` method to load all the audio files that we need for the game.
+   * Then we'll play them using the `playAudio` method.
+   */
   loadAudios() {
     this.audios = {
       jump: this.sound.add('jump'),
@@ -160,8 +173,10 @@ Then we'll play them using the `playAudio` method.
     }
   }
 
-  playAudio(key) {
-    this.audios[key].play()
+  playAudio(key: string): void {
+    if (this.audios && this.audios[key]) {
+      this.audios[key].play()
+    }
   }
 
   /*
@@ -187,9 +202,9 @@ This is the game loop. The function is called every frame.
 Here is where we can check if a key was pressed or the situation of the player to act accordingly. We use the `update` method to check if the player pressed the space key.
 */
   update() {
-    if (Phaser.Input.Keyboard.JustDown(this.SPACE)) {
+    if (this.SPACE && Phaser.Input.Keyboard.JustDown(this.SPACE)) {
       this.jump()
-    } else if (this.player.body.blocked.down) {
+    } else if (this.player?.body?.blocked.down) {
       this.jumpTween?.stop()
       this.player.rotation = 0
       // ground
@@ -202,8 +217,8 @@ This is the method that we use to make the player jump. A jump is just a velocit
 We also play a jumping sound and we add a tween to rotate the player while jumping.
 */
   jump() {
-    if (!this.player.body.blocked.down) return
-    this.player.body.setVelocityY(-300)
+    if (!this.player?.body?.blocked.down) return
+    this.player.body.velocity.y = -300
 
     this.playAudio('jump')
     this.jumpTween = this.tweens.add({
@@ -224,7 +239,7 @@ What should we do when we finish the game scene?
 
 */
   finishScene() {
-    this.theme.stop()
+    this.theme?.stop()
     this.playAudio('dead')
     this.registry.set('score', '' + this.score)
     this.scene.start('gameover')
@@ -235,6 +250,6 @@ This method is called every 100ms and it is used to update the score and show it
 */
   updateScore(points = 1) {
     this.score += points
-    this.scoreText.setText(this.score)
+    this.scoreText?.setText(this.score.toString())
   }
 }
