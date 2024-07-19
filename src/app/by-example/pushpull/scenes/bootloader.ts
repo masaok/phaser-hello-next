@@ -1,4 +1,7 @@
 export default class Bootloader extends Phaser.Scene {
+  progressBar: Phaser.GameObjects.Graphics | undefined
+  loadBar: Phaser.GameObjects.Graphics | undefined
+
   constructor() {
     super({ key: 'bootloader' })
   }
@@ -23,10 +26,10 @@ export default class Bootloader extends Phaser.Scene {
   setLoadEvents() {
     this.load.on(
       'progress',
-      function (value) {
-        this.progressBar.clear()
-        this.progressBar.fillStyle(0xa6f316, 1)
-        this.progressBar.fillRect(
+      function (this: Bootloader, value: number) {
+        this.progressBar?.clear()
+        this.progressBar?.fillStyle(0xa6f316, 1)
+        this.progressBar?.fillRect(
           this.cameras.main.width / 4,
           this.cameras.main.height / 2 - 16,
           (this.cameras.main.width / 2) * value,

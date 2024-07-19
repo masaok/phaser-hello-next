@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Simple Full Screen Example
+ * https://pello.itch.io/pushpull
  */
 
 import dynamic from 'next/dynamic'
