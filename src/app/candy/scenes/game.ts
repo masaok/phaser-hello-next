@@ -137,7 +137,7 @@ export default class Game extends Phaser.Scene {
   */
   addObjects() {
     this.objectsLayer?.objects.forEach(object => {
-      if (object.name.startsWith('block')) {
+      if (object.x && object.y && object.name.startsWith('block')) {
         const [name, width, height, color] = object.name.split('_')
         this.activeBlock = new BlockGroup(this, object.x, object.y, Number(width), Number(height), color)
         this.blocks?.add(this.activeBlock)
@@ -146,7 +146,7 @@ export default class Game extends Phaser.Scene {
         }
       }
 
-      if (object.x && object.name.startsWith('exit')) {
+      if (object.x && object.y && object.name.startsWith('exit')) {
         this.exits?.add(new Exit(this, object.x - 16, object.y))
       }
     })
