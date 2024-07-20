@@ -3,6 +3,7 @@ import Player from '../gameobjects/player'
 import io from 'socket.io-client'
 
 import { NEW_PLAYER, CURRENT_PLAYERS, PLAYER_DISCONNECTED, PLAYER_MOVED, PLAYER_IS_MOVING } from '../status'
+import { SERVER_HOST } from '../constants'
 
 export default class Game extends Phaser.Scene {
   constructor() {
@@ -21,7 +22,7 @@ export default class Game extends Phaser.Scene {
 This is where the connection with the server is established and we set listeners for events that we will receive from that server. Through those listeners, we will be aware of new players, player movement and player destroy events. We need to add that `.bind(this)` to this event callback to make the elements of this class reachable. In this case, we separate the group of enemies in a hash and their physical group with `this.enemyPlayers` to set the collisions. But we could just use the physical group.
 */
   startSockets() {
-    this.socket = io()
+    this.socket = io(SERVER_HOST)
     this.addPlayer()
     this.enemies = {}
     this.enemyPlayers = this.physics.add.group()
