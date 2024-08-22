@@ -11,7 +11,7 @@ import { Game, AUTO } from 'phaser'
 
 import TheScene from './scenes/RoadCrossingScene'
 
-const HelloGame: React.FC = () => {
+const TheGame: React.FC = () => {
   useEffect(() => {
     const config: Phaser.Types.Core.GameConfig = {
       type: AUTO,
@@ -19,6 +19,9 @@ const HelloGame: React.FC = () => {
       height: window.innerHeight,
       scene: TheScene,
       parent: 'phaser-container',
+      input: {
+        keyboard: true,
+      },
     }
 
     const game = new Game(config)
@@ -31,4 +34,4 @@ const HelloGame: React.FC = () => {
   return <div id="phaser-container" style={{ width: '100vw', height: '100vh' }} />
 }
 
-export default HelloGame
+export default TheGame
