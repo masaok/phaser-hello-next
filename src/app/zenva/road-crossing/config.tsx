@@ -22,6 +22,13 @@ const TheGame: React.FC = () => {
       input: {
         keyboard: true,
       },
+      physics: {
+        default: 'arcade',
+        arcade: {
+          // gravity: { y: 300 }, // Example gravity setting
+          debug: false, // show the physics bounding box
+        },
+      },
     }
 
     const game = new Game(config)
