@@ -26,6 +26,9 @@ class RoadCrossingScene extends Scene {
   enemyMinX: number
   enemyMaxX: number
 
+  // 07 - Groups
+  enemies: Phaser.GameObjects.Group | undefined
+
   constructor() {
     super('hello-world')
   }
@@ -189,6 +192,42 @@ class RoadCrossingScene extends Scene {
     this.physicsEnemy = this.physics.add.sprite(this.enemyMinX, this.enemyMinY, 'enemy')
 
     this.physicsEnemy.setVelocity(this.enemyMinSpeed)
+
+    // 07 - Groups
+    // enemy group
+    this.enemies = this.add.group({
+      key: 'enemy',
+      repeat: 5,
+      setXY: {
+        x: 90,
+        y: 100,
+        stepX: 80,
+        stepY: 20,
+      },
+    })
+
+    // Add sprites to the group
+    // for (let i = 0; i < 5; i++) {
+    //   this.enemies.create(90 + i * 80, 100 + i * 20, 'enemy')
+    // }
+
+    // setting scale to all group elements
+    Phaser.Actions.ScaleXY(this.enemies.getChildren(), -0.4, -0.4)
+
+    // set flipX, and speed
+    // Phaser.Actions.Call(
+    //   this.enemies.getChildren(),
+    //   function (enemy) {
+    //     // flip enemy
+    //     enemy.flipX = true
+
+    //     // set speed
+    //     let dir = Math.random() < 0.5 ? 1 : -1
+    //     let speed = this.enemyMinSpeed + Math.random() * (this.enemyMaxSpeed - this.enemyMinSpeed)
+    //     enemy.speed = dir * speed
+    //   },
+    //   this
+    // )
   }
 
   // this is called up to 60 times per second
