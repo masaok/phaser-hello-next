@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
+import { MapMinions } from './Minions'
 
 interface TerrainProps {
   mapSize: number
@@ -21,7 +22,7 @@ export default function Terrain({ mapSize, onGroundClick }: TerrainProps) {
 
   return (
     <group>
-      {/* Base ground plane - jungle/grass color */}
+      {/* Base ground plane - lush jungle/grass green */}
       <mesh
         ref={groundRef}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -30,7 +31,7 @@ export default function Terrain({ mapSize, onGroundClick }: TerrainProps) {
         onClick={handleClick}
       >
         <planeGeometry args={[mapSize, mapSize]} />
-        <meshStandardMaterial color="#6a7a5a" />
+        <meshStandardMaterial color="#4a6a3a" />
       </mesh>
 
       {/* Void/edge areas */}
@@ -59,6 +60,9 @@ export default function Terrain({ mapSize, onGroundClick }: TerrainProps) {
 
       {/* Bushes */}
       <Bushes mapSize={mapSize} />
+
+      {/* Minions */}
+      <MapMinions mapSize={mapSize} />
     </group>
   )
 }
@@ -126,7 +130,7 @@ function River({ mapSize }: { mapSize: number }) {
 function Lanes({ mapSize }: { mapSize: number }) {
   const halfSize = mapSize / 2
   const laneWidth = 8
-  const laneColor = "#8a9a7a"
+  const laneColor = "#7a6a50" // Dirt/brown path color
 
   return (
     <group>
@@ -166,16 +170,274 @@ function Lanes({ mapSize }: { mapSize: number }) {
 function Base({ position, color, isBlue }: { position: [number, number, number]; color: string; isBlue: boolean }) {
   return (
     <group position={position}>
-      {/* Base platform */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} receiveShadow>
-        <circleGeometry args={[18, 32]} />
-        <meshStandardMaterial color={color} />
+      {/* Detailed fountain/spawn platform */}
+      <Fountain isBlue={isBlue} />
+    </group>
+  )
+}
+
+// Detailed League of Legends style fountain/spawn area
+function Fountain({ isBlue }: { isBlue: boolean }) {
+  // Color palettes for blue and red side - more gray/concrete tones
+  const stoneLight = isBlue ? "#9a9a9a" : "#9a9090"
+  const stoneMid = isBlue ? "#787878" : "#787070"
+  const stoneDark = isBlue ? "#555555" : "#554a4a"
+  const stoneAccent = isBlue ? "#606870" : "#686060"
+  const glowColor = isBlue ? "#4488ff" : "#ff4444"
+
+  const numRadialSegments = 16 // Number of "pizza slice" segments
+  const numRings = 5 // Number of concentric rings/tiers
+
+  return (
+    <group>
+      {/* ============================================ */}
+      {/* =========== OUTER STEPS/TIERS ============= */}
+      {/* ============================================ */}
+
+      {/* Outermost ring - stepped tiers going up */}
+      {[...Array(numRings)].map((_, ringIdx) => {
+        const outerRadius = 20 - ringIdx * 2.5
+        const innerRadius = outerRadius - 2.2
+        const height = 0.1 + ringIdx * 0.25
+        const ringColor = ringIdx % 2 === 0 ? stoneMid : stoneLight
+
+        return (
+          <group key={`ring-${ringIdx}`}>
+            {/* Ring base */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height, 0]} receiveShadow castShadow>
+              <ringGeometry args={[innerRadius, outerRadius, 48]} />
+              <meshStandardMaterial color={ringColor} />
+            </mesh>
+
+            {/* Ring edge/lip */}
+            <mesh position={[0, height + 0.1, 0]} receiveShadow castShadow>
+              <torusGeometry args={[outerRadius - 0.1, 0.15, 8, 48]} />
+              <meshStandardMaterial color={stoneDark} />
+            </mesh>
+          </group>
+        )
+      })}
+
+      {/* ============================================ */}
+      {/* ========== RADIAL STONE SEGMENTS ========== */}
+      {/* ============================================ */}
+
+      {/* Radial divider lines - like wagon wheel spokes */}
+      {[...Array(numRadialSegments)].map((_, i) => {
+        const angle = (i / numRadialSegments) * Math.PI * 2
+        const length = 18
+        const startRadius = 3
+
+        return (
+          <group key={`radial-${i}`}>
+            {/* Main radial line */}
+            <mesh
+              position={[
+                Math.cos(angle) * (startRadius + length / 2),
+                0.6,
+                Math.sin(angle) * (startRadius + length / 2)
+              ]}
+              rotation={[0, -angle + Math.PI / 2, 0]}
+              receiveShadow
+              castShadow
+            >
+              <boxGeometry args={[0.3, 0.25, length]} />
+              <meshStandardMaterial color={stoneDark} />
+            </mesh>
+
+            {/* Decorative stone caps at intervals */}
+            {[0.3, 0.5, 0.7, 0.9].map((t, j) => {
+              const r = startRadius + length * t
+              return (
+                <mesh
+                  key={`cap-${i}-${j}`}
+                  position={[Math.cos(angle) * r, 0.8, Math.sin(angle) * r]}
+                  castShadow
+                >
+                  <cylinderGeometry args={[0.4, 0.5, 0.3, 8]} />
+                  <meshStandardMaterial color={stoneAccent} />
+                </mesh>
+              )
+            })}
+          </group>
+        )
+      })}
+
+      {/* ============================================ */}
+      {/* ======== CONCENTRIC RING PATTERNS ========= */}
+      {/* ============================================ */}
+
+      {/* Stone segments between radial lines - detailed floor pattern */}
+      {[...Array(numRadialSegments)].map((_, segIdx) => {
+        const angle1 = (segIdx / numRadialSegments) * Math.PI * 2
+        const angle2 = ((segIdx + 1) / numRadialSegments) * Math.PI * 2
+        const midAngle = (angle1 + angle2) / 2
+
+        return (
+          <group key={`seg-${segIdx}`}>
+            {/* Inner segment stones */}
+            {[...Array(4)].map((_, ringIdx) => {
+              const innerR = 4 + ringIdx * 3.5
+              const outerR = innerR + 3
+              const midR = (innerR + outerR) / 2
+              const stoneColor = (segIdx + ringIdx) % 2 === 0 ? stoneLight : stoneMid
+
+              return (
+                <mesh
+                  key={`stone-${segIdx}-${ringIdx}`}
+                  position={[Math.cos(midAngle) * midR, 0.55 + ringIdx * 0.08, Math.sin(midAngle) * midR]}
+                  rotation={[-Math.PI / 2, 0, midAngle]}
+                  receiveShadow
+                >
+                  <planeGeometry args={[2.8, (outerR - innerR) * 0.9]} />
+                  <meshStandardMaterial color={stoneColor} />
+                </mesh>
+              )
+            })}
+          </group>
+        )
+      })}
+
+      {/* ============================================ */}
+      {/* ============ CENTER PLATFORM ============== */}
+      {/* ============================================ */}
+
+      {/* Central raised platform */}
+      <mesh position={[0, 0.8, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[4, 4.5, 0.6, 32]} />
+        <meshStandardMaterial color={stoneDark} />
       </mesh>
 
-      {/* Inner platform */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} receiveShadow>
-        <circleGeometry args={[12, 32]} />
-        <meshStandardMaterial color={isBlue ? "#4a6a7a" : "#6a5a5a"} />
+      {/* Central decorative ring */}
+      <mesh position={[0, 1.15, 0]} receiveShadow castShadow>
+        <torusGeometry args={[3.5, 0.25, 12, 32]} />
+        <meshStandardMaterial color={stoneAccent} />
+      </mesh>
+
+      {/* Inner center floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.2, 0]} receiveShadow>
+        <circleGeometry args={[3.3, 32]} />
+        <meshStandardMaterial color={stoneLight} />
+      </mesh>
+
+      {/* Center decorative pattern - interlocking stones */}
+      {[...Array(8)].map((_, i) => {
+        const angle = (i / 8) * Math.PI * 2
+        const r = 2
+        return (
+          <mesh
+            key={`center-stone-${i}`}
+            position={[Math.cos(angle) * r, 1.22, Math.sin(angle) * r]}
+            rotation={[-Math.PI / 2, 0, angle]}
+            receiveShadow
+          >
+            <planeGeometry args={[1.2, 1.2]} />
+            <meshStandardMaterial color={i % 2 === 0 ? stoneMid : stoneLight} />
+          </mesh>
+        )
+      })}
+
+      {/* Center emblem/design */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.25, 0]} receiveShadow>
+        <ringGeometry args={[0.5, 1.2, 6]} />
+        <meshStandardMaterial color={stoneDark} />
+      </mesh>
+
+      {/* ============================================ */}
+      {/* ============ OUTER EDGE DETAILS =========== */}
+      {/* ============================================ */}
+
+      {/* Outer wall/barrier - semicircular amphitheater style */}
+      {[...Array(24)].map((_, i) => {
+        // Create wall segments for back half (away from map center)
+        const startAngle = isBlue ? Math.PI * 0.7 : Math.PI * 1.7
+        const endAngle = isBlue ? Math.PI * 1.3 : Math.PI * 0.3
+        const angleRange = isBlue ? Math.PI * 0.6 : Math.PI * 0.6
+        const angle = startAngle + (i / 24) * angleRange * 2 - angleRange
+        const r = 22
+
+        return (
+          <group key={`wall-${i}`}>
+            {/* Wall pillar */}
+            <mesh
+              position={[Math.cos(angle) * r, 1.5, Math.sin(angle) * r]}
+              castShadow
+            >
+              <boxGeometry args={[1.5, 3, 0.8]} />
+              <meshStandardMaterial color={stoneDark} />
+            </mesh>
+
+            {/* Pillar top */}
+            <mesh
+              position={[Math.cos(angle) * r, 3.2, Math.sin(angle) * r]}
+              castShadow
+            >
+              <boxGeometry args={[1.8, 0.4, 1]} />
+              <meshStandardMaterial color={stoneAccent} />
+            </mesh>
+          </group>
+        )
+      })}
+
+      {/* ============================================ */}
+      {/* ============= DECORATIVE STONES =========== */}
+      {/* ============================================ */}
+
+      {/* Scattered decorative stones around edges */}
+      {[...Array(12)].map((_, i) => {
+        // Use deterministic pseudo-random based on index
+        const seed = i * 0.618033988749895 // Golden ratio for nice distribution
+        const angle = (i / 12) * Math.PI * 2 + (seed % 0.2)
+        const r = 19 + ((i * 7) % 20) / 10
+        const size = 0.4 + ((i * 3) % 10) / 30
+
+        return (
+          <mesh
+            key={`deco-stone-${i}`}
+            position={[Math.cos(angle) * r, size / 2 + 0.3, Math.sin(angle) * r]}
+            rotation={[(i * 0.1) % 0.3, (i * 0.5) % Math.PI, (i * 0.15) % 0.3]}
+            castShadow
+          >
+            <dodecahedronGeometry args={[size, 0]} />
+            <meshStandardMaterial color={stoneMid} />
+          </mesh>
+        )
+      })}
+
+      {/* ============================================ */}
+      {/* ================ GLOW EFFECTS ============= */}
+      {/* ============================================ */}
+
+      {/* Healing aura on the ground */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.15, 0]} receiveShadow>
+        <circleGeometry args={[15, 48]} />
+        <meshStandardMaterial
+          color={glowColor}
+          transparent
+          opacity={0.15}
+          emissive={glowColor}
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+
+      {/* Pulsing center glow */}
+      <pointLight
+        position={[0, 2, 0]}
+        color={glowColor}
+        intensity={8}
+        distance={25}
+      />
+
+      {/* Ambient glow ring */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.3, 0]}>
+        <ringGeometry args={[2.5, 3, 32]} />
+        <meshStandardMaterial
+          color={glowColor}
+          emissive={glowColor}
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.4}
+        />
       </mesh>
     </group>
   )

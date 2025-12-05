@@ -72,8 +72,8 @@ export default function CameraController({ championPosition, onViewportChange }:
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current.add(e.key.toLowerCase())
 
-      // Spacebar to toggle camera lock
-      if (e.key === ' ') {
+      // Spacebar or Y key to toggle camera lock
+      if (e.key === ' ' || e.key.toLowerCase() === 'y') {
         setIsFollowing(prev => !prev)
         if (!isFollowing) {
           setCameraTarget([championPosition[0], 0, championPosition[2]])

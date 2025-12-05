@@ -136,6 +136,7 @@ export default function Game3D() {
           usingRockets={abilityState.usingRockets}
           health={abilityState.health}
           maxHealth={abilityState.maxHealth}
+          mapSize={MAP_SIZE}
         />
         <Projectiles projectiles={projectiles} chompers={chompers} />
         {targetPosition && (

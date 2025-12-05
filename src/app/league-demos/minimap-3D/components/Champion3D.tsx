@@ -1,8 +1,11 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Billboard } from '@react-three/drei'
 import * as THREE from 'three'
+import JinxModel, { JinxLegs } from './JinxModel'
+import { getMapColliders, checkCollision, resolveCollision, Collider } from './CollisionSystem'
 
 interface Champion3DProps {
   position: [number, number, number]
@@ -13,6 +16,7 @@ interface Champion3DProps {
   usingRockets?: boolean
   health?: number
   maxHealth?: number
+  mapSize?: number
 }
 
 const MOVE_SPEED = 30 // units per second
@@ -27,12 +31,17 @@ export default function Champion3D({
   usingRockets = false,
   health = 610,
   maxHealth = 610,
+  mapSize = 200,
 }: Champion3DProps) {
   const groupRef = useRef<THREE.Group>(null)
   const currentPosition = useRef<THREE.Vector3>(new THREE.Vector3(...position))
   const currentRotation = useRef(0)
-  const walkCycle = useRef(0)
+  const animCycle = useRef(0)
+  const idleTime = useRef(0)
   const isMoving = useRef(false)
+
+  // Get map colliders (memoized)
+  const colliders = useMemo(() => getMapColliders(mapSize), [mapSize])
 
   // Update position when external position changes
   useEffect(() => {
@@ -50,11 +59,27 @@ export default function Champion3D({
 
       if (distance > 0.5) {
         isMoving.current = true
+        idleTime.current = 0 // Reset idle time when moving
 
-        // Move toward target
+        // Calculate intended next position
         direction.normalize()
         const moveAmount = Math.min(MOVE_SPEED * delta, distance)
-        current.add(direction.multiplyScalar(moveAmount))
+        const intendedX = current.x + direction.x * moveAmount
+        const intendedZ = current.z + direction.z * moveAmount
+
+        // TEMPORARILY DISABLED: Collision detection
+        // const [resolvedX, resolvedZ] = resolveCollision(
+        //   current.x,
+        //   current.z,
+        //   intendedX,
+        //   intendedZ,
+        //   colliders,
+        //   2.0 // Character radius for collision
+        // )
+
+        // Update position directly (no collision)
+        current.x = intendedX
+        current.z = intendedZ
 
         // Update rotation to face movement direction
         const targetRotation = Math.atan2(direction.x, direction.z)
@@ -70,8 +95,8 @@ export default function Champion3D({
         // Notify parent of rotation update
         onRotationUpdate?.(currentRotation.current)
 
-        // Walk animation
-        walkCycle.current += delta * 10
+        // Running animation - faster cycle for running
+        animCycle.current += delta * 12
 
         // Update group position
         groupRef.current.position.copy(current)
@@ -81,163 +106,141 @@ export default function Champion3D({
         onPositionUpdate([current.x, current.y, current.z])
       } else {
         isMoving.current = false
-        walkCycle.current = 0
         onReachedTarget()
       }
     } else {
       isMoving.current = false
-      walkCycle.current = 0
     }
 
-    // Apply walk animation to legs
+    // Increment idle time when not moving
+    if (!isMoving.current) {
+      idleTime.current += delta
+      // Slowly decay animation cycle for smooth transition to idle
+      animCycle.current *= 0.9
+    }
+
+    // Apply animations to body parts
     if (groupRef.current) {
       const leftLeg = groupRef.current.getObjectByName('leftLeg')
       const rightLeg = groupRef.current.getObjectByName('rightLeg')
-
-      if (leftLeg && rightLeg) {
-        if (isMoving.current) {
-          leftLeg.rotation.x = Math.sin(walkCycle.current) * 0.5
-          rightLeg.rotation.x = Math.sin(walkCycle.current + Math.PI) * 0.5
-        } else {
-          leftLeg.rotation.x = 0
-          rightLeg.rotation.x = 0
-        }
-      }
-
-      // Slight body bob when walking
+      const leftArm = groupRef.current.getObjectByName('leftArm')
+      const rightArm = groupRef.current.getObjectByName('rightArm')
       const body = groupRef.current.getObjectByName('body')
-      if (body && isMoving.current) {
-        body.position.y = 1.5 + Math.abs(Math.sin(walkCycle.current * 2)) * 0.1
+
+      if (isMoving.current) {
+        // RUNNING ANIMATION
+        const runCycle = animCycle.current
+
+        // Leg swing - larger amplitude for running
+        if (leftLeg && rightLeg) {
+          leftLeg.rotation.x = Math.sin(runCycle) * 0.7
+          rightLeg.rotation.x = Math.sin(runCycle + Math.PI) * 0.7
+        }
+
+        // Arm swing - opposite to legs for natural running
+        if (leftArm && rightArm) {
+          leftArm.rotation.x = Math.sin(runCycle + Math.PI) * 0.5
+          rightArm.rotation.x = Math.sin(runCycle) * 0.5
+        }
+
+        // Body animations while running
+        if (body) {
+          // Vertical bounce
+          body.position.y = 1.5 + Math.abs(Math.sin(runCycle * 2)) * 0.15
+          // Slight forward lean
+          body.rotation.x = 0.1
+          // Subtle side-to-side sway
+          body.rotation.z = Math.sin(runCycle) * 0.05
+        }
+      } else {
+        // IDLE ANIMATION - subtle breathing and sway
+        const breathCycle = idleTime.current * 1.5 // Slow breathing
+        const swayCycle = idleTime.current * 0.8 // Even slower sway
+
+        // Legs return to neutral with slight weight shift
+        if (leftLeg && rightLeg) {
+          leftLeg.rotation.x = Math.sin(swayCycle) * 0.02
+          rightLeg.rotation.x = Math.sin(swayCycle + Math.PI) * 0.02
+        }
+
+        // Arms have subtle idle movement
+        if (leftArm && rightArm) {
+          leftArm.rotation.x = Math.sin(breathCycle * 0.7) * 0.03
+          rightArm.rotation.x = Math.sin(breathCycle * 0.7 + 0.5) * 0.03
+          // Slight outward sway
+          leftArm.rotation.z = 0.1 + Math.sin(swayCycle) * 0.02
+          rightArm.rotation.z = -0.1 - Math.sin(swayCycle) * 0.02
+        }
+
+        // Body breathing and sway
+        if (body) {
+          // Breathing - subtle vertical movement
+          body.position.y = 1.5 + Math.sin(breathCycle) * 0.03
+          // Return to upright
+          body.rotation.x = Math.sin(swayCycle * 0.5) * 0.02
+          // Weight shift side to side
+          body.rotation.z = Math.sin(swayCycle) * 0.03
+          // Subtle head/body turn
+          body.rotation.y = Math.sin(swayCycle * 0.3) * 0.05
+        }
       }
     }
   })
 
   return (
     <group ref={groupRef} position={position} scale={[2, 2, 2]}>
-      {/* Health bar */}
-      <group position={[0, 4.5, 0]}>
-        {/* Background */}
-        <mesh>
-          <planeGeometry args={[2.5, 0.3]} />
-          <meshBasicMaterial color="#333333" />
+      {/* Health bar - Billboard to always face camera (LoL style) */}
+      <Billboard position={[0, 4.5, 0]} follow={true} lockX={false} lockY={false} lockZ={false}>
+        {/* Level indicator box on left */}
+        <mesh position={[-1.55, 0, 0]}>
+          <planeGeometry args={[0.28, 0.28]} />
+          <meshBasicMaterial color="#1a1a1a" />
         </mesh>
-        {/* Health fill */}
-        <mesh position={[-1.2 + (health / maxHealth) * 1.2, 0, 0.01]}>
-          <planeGeometry args={[2.4 * (health / maxHealth), 0.2]} />
-          <meshBasicMaterial color={health / maxHealth > 0.5 ? "#00ff00" : health / maxHealth > 0.25 ? "#ffff00" : "#ff0000"} />
+        <mesh position={[-1.55, 0, 0.01]}>
+          <planeGeometry args={[0.22, 0.22]} />
+          <meshBasicMaterial color="#0a0a0a" />
         </mesh>
-      </group>
 
-      {/* Character body */}
+        {/* Outer black border */}
+        <mesh position={[0.05, 0, -0.02]}>
+          <planeGeometry args={[2.9, 0.22]} />
+          <meshBasicMaterial color="#000000" />
+        </mesh>
+
+        {/* Inner dark background */}
+        <mesh position={[0.05, 0, -0.01]}>
+          <planeGeometry args={[2.8, 0.16]} />
+          <meshBasicMaterial color="#1a1a1a" />
+        </mesh>
+
+        {/* Health fill - bright green like LoL */}
+        <mesh position={[-1.35 + (health / maxHealth) * 1.4, 0, 0]}>
+          <planeGeometry args={[2.8 * (health / maxHealth), 0.12]} />
+          <meshBasicMaterial color={health / maxHealth > 0.5 ? "#22cc22" : health / maxHealth > 0.25 ? "#cccc00" : "#cc2222"} />
+        </mesh>
+
+        {/* Health fill top highlight for 3D effect */}
+        <mesh position={[-1.35 + (health / maxHealth) * 1.4, 0.03, 0.005]}>
+          <planeGeometry args={[2.8 * (health / maxHealth), 0.04]} />
+          <meshBasicMaterial color={health / maxHealth > 0.5 ? "#66ff66" : health / maxHealth > 0.25 ? "#ffff66" : "#ff6666"} />
+        </mesh>
+
+        {/* Tick marks - black vertical lines dividing into segments */}
+        {[...Array(9)].map((_, i) => (
+          <mesh key={i} position={[-1.35 + (i + 1) * 0.28, 0, 0.01]}>
+            <planeGeometry args={[0.025, 0.16]} />
+            <meshBasicMaterial color="#000000" />
+          </mesh>
+        ))}
+      </Billboard>
+
+      {/* High-poly Jinx character body */}
       <group name="body" position={[0, 1.5, 0]}>
-        {/* Torso - pink top */}
-        <mesh position={[0, 0.3, 0]} castShadow>
-          <boxGeometry args={[0.8, 0.8, 0.5]} />
-          <meshStandardMaterial color="#ff69b4" />
-        </mesh>
-
-        {/* Head */}
-        <mesh position={[0, 1, 0]} castShadow>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshStandardMaterial color="#ffdbac" />
-        </mesh>
-
-        {/* Hair - blue braids */}
-        <mesh position={[0, 1.3, 0]} castShadow>
-          <boxGeometry args={[0.7, 0.3, 0.6]} />
-          <meshStandardMaterial color="#00bfff" />
-        </mesh>
-
-        {/* Left braid */}
-        <mesh position={[-0.4, 0.5, 0]} castShadow>
-          <boxGeometry args={[0.15, 1.2, 0.15]} />
-          <meshStandardMaterial color="#00bfff" />
-        </mesh>
-
-        {/* Right braid */}
-        <mesh position={[0.4, 0.5, 0]} castShadow>
-          <boxGeometry args={[0.15, 1.2, 0.15]} />
-          <meshStandardMaterial color="#00bfff" />
-        </mesh>
-
-        {/* Eyes */}
-        <mesh position={[-0.1, 1, 0.26]} castShadow>
-          <boxGeometry args={[0.1, 0.15, 0.02]} />
-          <meshStandardMaterial color="#ff1493" emissive="#ff1493" emissiveIntensity={0.3} />
-        </mesh>
-        <mesh position={[0.1, 1, 0.26]} castShadow>
-          <boxGeometry args={[0.1, 0.15, 0.02]} />
-          <meshStandardMaterial color="#ff1493" emissive="#ff1493" emissiveIntensity={0.3} />
-        </mesh>
-
-        {/* Weapon - Pow-Pow (Minigun) or Fishbones (Rocket Launcher) */}
-        {!usingRockets ? (
-          // Minigun
-          <group>
-            <mesh position={[0.6, 0.3, 0.2]} rotation={[0, 0, -0.3]} castShadow>
-              <boxGeometry args={[0.8, 0.2, 0.2]} />
-              <meshStandardMaterial color="#666666" />
-            </mesh>
-            <mesh position={[0.9, 0.35, 0.2]} rotation={[0, 0, -0.3]} castShadow>
-              <cylinderGeometry args={[0.08, 0.08, 0.5, 8]} />
-              <meshStandardMaterial color="#888888" />
-            </mesh>
-            {/* Minigun barrels */}
-            {[0, 0.1, -0.1].map((offset, i) => (
-              <mesh key={i} position={[1.1, 0.35 + offset, 0.2 + (i === 0 ? 0 : i === 1 ? 0.08 : -0.08)]} rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.03, 0.03, 0.3, 6]} />
-                <meshStandardMaterial color="#444444" />
-              </mesh>
-            ))}
-          </group>
-        ) : (
-          // Rocket Launcher (Fishbones)
-          <group>
-            <mesh position={[0.5, 0.3, 0.2]} rotation={[0, 0, -0.2]} castShadow>
-              <boxGeometry args={[1.2, 0.35, 0.35]} />
-              <meshStandardMaterial color="#ff6600" />
-            </mesh>
-            {/* Shark mouth decoration */}
-            <mesh position={[1.0, 0.25, 0.2]} rotation={[0, 0, -0.2]} castShadow>
-              <coneGeometry args={[0.2, 0.4, 4]} />
-              <meshStandardMaterial color="#ff4444" />
-            </mesh>
-            {/* Rocket tube */}
-            <mesh position={[0.9, 0.4, 0.2]} rotation={[0, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[0.15, 0.12, 0.5, 8]} />
-              <meshStandardMaterial color="#cc4400" />
-            </mesh>
-            {/* Glow effect */}
-            <pointLight position={[1.0, 0.3, 0.2]} color="#ff6600" intensity={2} distance={3} />
-          </group>
-        )}
+        <JinxModel usingRockets={usingRockets} />
       </group>
 
-      {/* Left leg */}
-      <group name="leftLeg" position={[-0.2, 0.5, 0]}>
-        <mesh position={[0, 0, 0]} castShadow>
-          <boxGeometry args={[0.25, 0.8, 0.25]} />
-          <meshStandardMaterial color="#4a4a8a" />
-        </mesh>
-        {/* Boot */}
-        <mesh position={[0, -0.45, 0.05]} castShadow>
-          <boxGeometry args={[0.3, 0.2, 0.35]} />
-          <meshStandardMaterial color="#2a2a4a" />
-        </mesh>
-      </group>
-
-      {/* Right leg */}
-      <group name="rightLeg" position={[0.2, 0.5, 0]}>
-        <mesh position={[0, 0, 0]} castShadow>
-          <boxGeometry args={[0.25, 0.8, 0.25]} />
-          <meshStandardMaterial color="#4a4a8a" />
-        </mesh>
-        {/* Boot */}
-        <mesh position={[0, -0.45, 0.05]} castShadow>
-          <boxGeometry args={[0.3, 0.2, 0.35]} />
-          <meshStandardMaterial color="#2a2a4a" />
-        </mesh>
-      </group>
+      {/* Legs - separate for animation */}
+      <JinxLegs />
 
       {/* Selection circle */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>

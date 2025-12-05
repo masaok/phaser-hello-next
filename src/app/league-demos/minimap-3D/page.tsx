@@ -21,7 +21,7 @@ export default function Minimap3DPage() {
           Jinx - 3D Demo
         </h1>
         <p className="text-gray-400 text-sm">
-          Click to move • Scroll to zoom • Space to lock camera • Q/W/E/R for abilities
+          Click to move • Scroll to zoom • Space/Y to lock camera • Q/W/E/R for abilities
         </p>
       </div>
       <Game3D />
