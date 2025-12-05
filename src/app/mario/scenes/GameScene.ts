@@ -15,7 +15,7 @@ export default class GameScene extends Phaser.Scene {
   flag!: Phaser.Physics.Arcade.Sprite
   scoreText!: Phaser.GameObjects.Text
   coinsText!: Phaser.GameObjects.Text
-  levelWidth: number = 3200
+  levelWidth: number = 3800
   isLevelComplete: boolean = false
 
   constructor() {
@@ -132,100 +132,100 @@ export default class GameScene extends Phaser.Scene {
     // Hidden question block higher up
     this.createQuestionBlock(320, 272, 'coin')
 
-    // First pipe
-    this.createPipe(450, 2)
+    // First pipe (more space after blocks)
+    this.createPipe(520, 2)
 
     // First Goomba
     this.createGoomba(350, 500)
 
     // === Section 2: Platforms ===
 
-    // Brick platform
+    // Brick platform (more space after pipe)
     for (let i = 0; i < 5; i++) {
-      this.createBrick(550 + i * 32, 400)
+      this.createBrick(650 + i * 32, 400)
     }
-    this.createQuestionBlock(614, 400, 'coin')
+    this.createQuestionBlock(714, 400, 'coin')
 
     // Goombas
-    this.createGoomba(580, 500)
-    this.createGoomba(650, 500)
+    this.createGoomba(680, 500)
+    this.createGoomba(750, 500)
 
-    // Second pipe (taller)
-    this.createPipe(720, 3)
+    // Second pipe (taller, more space)
+    this.createPipe(880, 3)
 
     // === Section 3: Gap section ===
 
-    // Platform over first pit
+    // Platform over first pit (adjusted for new spacing)
     for (let i = 0; i < 3; i++) {
-      this.createBrick(832 + i * 32, 368)
+      this.createBrick(1000 + i * 32, 368)
     }
 
     // Goombas after pit
-    this.createGoomba(950, 500)
-    this.createGoomba(1000, 500)
+    this.createGoomba(1120, 500)
+    this.createGoomba(1180, 500)
 
     // Stair blocks
-    this.createStairs(1050, 520, 4, 'up')
+    this.createStairs(1250, 520, 4, 'up')
 
     // === Section 4: More challenges ===
 
-    // Question block row
-    this.createBrick(1200, 400)
-    this.createQuestionBlock(1232, 400, 'coin')
-    this.createQuestionBlock(1264, 400, 'mushroom')
-    this.createBrick(1296, 400)
+    // Question block row (with more space)
+    this.createBrick(1450, 400)
+    this.createQuestionBlock(1482, 400, 'coin')
+    this.createQuestionBlock(1514, 400, 'mushroom')
+    this.createBrick(1546, 400)
 
     // Elevated platform
     for (let i = 0; i < 6; i++) {
-      this.createBrick(1350 + i * 32, 336)
+      this.createBrick(1650 + i * 32, 336)
     }
 
     // Goombas on platform
-    this.createGoomba(1400, 300)
-    this.createGoomba(1480, 300)
+    this.createGoomba(1700, 300)
+    this.createGoomba(1780, 300)
 
-    // Third pipe
-    this.createPipe(1550, 3)
+    // Third pipe (more space)
+    this.createPipe(1950, 3)
 
     // === Section 5: Second pit area ===
 
     // Platform over second pit
     for (let i = 0; i < 4; i++) {
-      this.createBrick(1632 + i * 32, 400)
+      this.createBrick(2100 + i * 32, 400)
     }
-    this.createQuestionBlock(1696, 400, 'coin')
+    this.createQuestionBlock(2164, 400, 'coin')
 
     // === Section 6: Staircase to flag ===
 
     // Stair up
-    this.createStairs(1900, 520, 4, 'up')
+    this.createStairs(2350, 520, 4, 'up')
 
     // Flat top
     for (let i = 0; i < 3; i++) {
-      this.platforms.create(2028 + i * 32 + 16, 392, 'ground')
+      this.platforms.create(2478 + i * 32 + 16, 392, 'ground')
     }
 
     // Stair down
-    this.createStairs(2100, 520, 4, 'down')
+    this.createStairs(2550, 520, 4, 'down')
 
     // Final stretch
-    this.createGoomba(2200, 500)
-    this.createGoomba(2280, 500)
-    this.createGoomba(2360, 500)
+    this.createGoomba(2650, 500)
+    this.createGoomba(2730, 500)
+    this.createGoomba(2810, 500)
 
     // More question blocks
-    this.createQuestionBlock(2500, 400, 'coin')
-    this.createBrick(2532, 400)
-    this.createQuestionBlock(2564, 400, 'coin')
+    this.createQuestionBlock(2900, 400, 'coin')
+    this.createBrick(2932, 400)
+    this.createQuestionBlock(2964, 400, 'coin')
 
     // Large staircase to flag
-    this.createStairs(2700, 520, 8, 'up')
+    this.createStairs(3100, 520, 8, 'up')
 
     // Final pipe before flag
-    this.createPipe(2950, 3)
+    this.createPipe(3400, 3)
 
     // Flag pole
-    this.flag = this.physics.add.sprite(3100, 360, 'flag')
+    this.flag = this.physics.add.sprite(3550, 360, 'flag')
     this.flag.setOrigin(0.5, 1)
     this.flag.setImmovable(true)
     const flagBody = this.flag.body as Phaser.Physics.Arcade.Body
@@ -233,9 +233,9 @@ export default class GameScene extends Phaser.Scene {
     flagBody.setSize(20, 300)
 
     // Castle (simple representation)
-    this.add.rectangle(3150, 470, 80, 100, 0x8b4513)
-    this.add.rectangle(3150, 400, 40, 40, 0x8b4513)
-    this.add.rectangle(3150, 440, 20, 20, 0x000000) // Door
+    this.add.rectangle(3600, 470, 80, 100, 0x8b4513)
+    this.add.rectangle(3600, 400, 40, 40, 0x8b4513)
+    this.add.rectangle(3600, 440, 20, 20, 0x000000) // Door
   }
 
   createQuestionBlock(x: number, y: number, contents: 'coin' | 'mushroom') {
@@ -260,24 +260,22 @@ export default class GameScene extends Phaser.Scene {
     const groundY = 536
     const pipeHeight = height * 32
 
-    // Create a single pipe rectangle
-    const pipe = this.add.rectangle(x, groundY, 64, pipeHeight, 0x00aa00)
+    // Create a single pipe rectangle (main collision body)
+    const pipe = this.add.rectangle(x, groundY, 56, pipeHeight, 0x00aa00)
     pipe.setOrigin(0.5, 1)
     this.physics.add.existing(pipe, true)
     this.platforms.add(pipe)
 
-    // Pipe rim (top part, slightly wider)
-    const rim = this.add.rectangle(x, groundY - pipeHeight, 72, 16, 0x00cc00)
+    // Pipe rim (top part, slightly wider) - visual only, no collision
+    const rim = this.add.rectangle(x, groundY - pipeHeight, 64, 12, 0x00cc00)
     rim.setOrigin(0.5, 1)
-    this.physics.add.existing(rim, true)
-    this.platforms.add(rim)
 
     // Highlight
-    const highlight = this.add.rectangle(x - 24, groundY - pipeHeight / 2, 8, pipeHeight - 16, 0x00ff00)
+    const highlight = this.add.rectangle(x - 20, groundY - pipeHeight / 2, 6, pipeHeight - 12, 0x00ff00)
     highlight.setOrigin(0.5, 0.5)
 
     // Dark side
-    const darkSide = this.add.rectangle(x + 24, groundY - pipeHeight / 2, 8, pipeHeight - 16, 0x008800)
+    const darkSide = this.add.rectangle(x + 20, groundY - pipeHeight / 2, 6, pipeHeight - 12, 0x008800)
     darkSide.setOrigin(0.5, 0.5)
   }
 

@@ -48,7 +48,7 @@ export default class Mario extends Phaser.Physics.Arcade.Sprite {
 
     // Jumping
     if ((this.cursors?.up.isDown || this.spaceKey?.isDown) && onGround) {
-      body.setVelocityY(-450)
+      body.setVelocityY(-580)
       this.isJumping = true
     }
 
