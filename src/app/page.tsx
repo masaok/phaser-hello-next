@@ -38,6 +38,12 @@ export default function Home() {
         >
           League of Lemmings
         </Link>
+        <Link
+          href="/league-demos"
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
+        >
+          League Demos
+        </Link>
       </div>
       <p className="mt-6 text-slate-500 text-sm">
         Built with Phaser 3.90 and Next.js 16
