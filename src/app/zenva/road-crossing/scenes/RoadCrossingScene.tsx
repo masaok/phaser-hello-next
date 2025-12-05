@@ -78,7 +78,7 @@ class RoadCrossingScene extends Scene {
     const viewportHeight = this.sys.game.config.height as number
 
     // create bg sprite
-    let bg = this.add.sprite(0, 0, 'background')
+    const bg = this.add.sprite(0, 0, 'background')
 
     // Get the sprite's original dimensions
     const spriteWidth = bg.width
@@ -95,8 +95,8 @@ class RoadCrossingScene extends Scene {
     // Center the sprite in the viewport
     bg.setPosition(viewportWidth / 2, viewportHeight / 2)
 
-    let gameW = this.sys.game.config.width
-    let gameH = this.sys.game.config.height
+    const gameW = this.sys.game.config.width
+    const gameH = this.sys.game.config.height
 
     console.log(gameW, gameH)
 
@@ -121,7 +121,7 @@ class RoadCrossingScene extends Scene {
 
     // 03 - Scaling and Flipping
     // create an enemy
-    let enemy1 = this.add.sprite(250, 180, 'enemy')
+    const enemy1 = this.add.sprite(250, 180, 'enemy')
 
     // set the origin of the enemy to its center
     enemy1.setOrigin(0.5, 0.5)
@@ -133,7 +133,7 @@ class RoadCrossingScene extends Scene {
     enemy1.setDepth(1)
 
     // create a second enemy
-    let enemy2 = this.add.sprite(450, 180, 'enemy')
+    const enemy2 = this.add.sprite(450, 180, 'enemy')
     enemy2.setPosition(viewportWidth / 2 + 200, viewportHeight / 2)
     // enemy2.displayWidth = 300
 
@@ -248,8 +248,8 @@ class RoadCrossingScene extends Scene {
     this.physicsEnemy.y += this.physicsEnemy.body.velocity.y
 
     // // check we haven't passed min or max Y
-    let conditionUp = this.physicsEnemy.body.velocity.y < 0 && this.physicsEnemy.y <= this.enemyMinY
-    let conditionDown = this.physicsEnemy.body.velocity.y > 0 && this.physicsEnemy.y >= this.enemyMaxY
+    const conditionUp = this.physicsEnemy.body.velocity.y < 0 && this.physicsEnemy.y <= this.enemyMinY
+    const conditionDown = this.physicsEnemy.body.velocity.y > 0 && this.physicsEnemy.y >= this.enemyMaxY
 
     // // if we passed the upper or lower limit, reverse
     if (conditionUp || conditionDown) {
@@ -283,8 +283,8 @@ class RoadCrossingScene extends Scene {
     }
 
     // treasure overlap check
-    let playerRect = this.player.getBounds()
-    let treasureRect = this.goal.getBounds()
+    const playerRect = this.player.getBounds()
+    const treasureRect = this.goal.getBounds()
 
     if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, treasureRect)) {
       console.log('reached goal!')

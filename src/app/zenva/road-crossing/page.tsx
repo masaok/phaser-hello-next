@@ -1,10 +1,7 @@
-/**
- * Simple Full Screen Example
- */
+'use client'
 
 import dynamic from 'next/dynamic'
 
-// This fixes "Error: HTMLVideoElement is not defined"
 const HelloGame = dynamic(() => import('./config'), {
   ssr: false,
 })

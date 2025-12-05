@@ -69,10 +69,12 @@ export class PlayGame extends Phaser.Scene {
                     this.debugText.setText('FIRING');
 
                     // check the line of fire between bullet and input position
+                    {
                     const lineOfFire : Phaser.Geom.Line = new Phaser.Geom.Line(this.gemBullet.x, this.gemBullet.y, pointer.x, pointer.y);
                     
                     // save the line of fire as a custom data in gem bullet
                     this.gemBullet.setData('angle', Phaser.Geom.Line.Angle(lineOfFire));
+                    }
                     break;
 
                 // stop, when the game is paused    

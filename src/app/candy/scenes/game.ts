@@ -190,12 +190,22 @@ export default class Game extends Phaser.Scene {
     This is called when the player touches the exit of the scene. It destroys the exit and calls the `finishScene` method.
   */
   hitExit(
-    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
-    exit: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+    player:
+      | Phaser.Physics.Arcade.Body
+      | Phaser.Physics.Arcade.StaticBody
+      | Phaser.Types.Physics.Arcade.GameObjectWithBody
+      | Phaser.Tilemaps.Tile,
+    exit:
+      | Phaser.Physics.Arcade.Body
+      | Phaser.Physics.Arcade.StaticBody
+      | Phaser.Types.Physics.Arcade.GameObjectWithBody
+      | Phaser.Tilemaps.Tile
   ) {
     if (!this.player) return
     this.player.active = false
-    exit.destroy()
+    if ('destroy' in exit) {
+      ;(exit as Phaser.GameObjects.GameObject).destroy()
+    }
 
     this.finishScene()
   }

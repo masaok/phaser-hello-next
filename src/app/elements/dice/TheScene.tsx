@@ -123,7 +123,7 @@ class TheScene extends Scene {
     textDiceValue.setStroke('#de77ae', 16).setScale(0)
 
     this.input.on('pointerdown', () => {
-      dice((diceValue: Number) => {
+      dice((diceValue: number) => {
         console.log('Dice value ', diceValue)
 
         // Show the dice value

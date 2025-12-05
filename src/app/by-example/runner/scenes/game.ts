@@ -141,24 +141,28 @@ between the player and the coins. The key part there is to set a function that w
   //   this.finishScene()
   // }
 
-  hitObstacle(
-    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
-    obstacle: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
-  ) {
+  hitObstacle() {
     this.updateScoreEvent?.destroy()
     this.finishScene()
   }
 
-  /*
-This method is called when the player hits a coin. We play a sound, update the score, and destroy the coin.
-*/
   hitCoin(
-    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
-    coin: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+    player:
+      | Phaser.Physics.Arcade.Body
+      | Phaser.Physics.Arcade.StaticBody
+      | Phaser.Types.Physics.Arcade.GameObjectWithBody
+      | Phaser.Tilemaps.Tile,
+    coin:
+      | Phaser.Physics.Arcade.Body
+      | Phaser.Physics.Arcade.StaticBody
+      | Phaser.Types.Physics.Arcade.GameObjectWithBody
+      | Phaser.Tilemaps.Tile
   ) {
     this.playAudio('coin')
     this.updateScore(1000)
-    coin.destroy()
+    if ('destroy' in coin) {
+      ;(coin as Phaser.GameObjects.GameObject).destroy()
+    }
   }
 
   /**

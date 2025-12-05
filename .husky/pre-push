@@ -1,1 +1,1 @@
-bun ci
+pnpm run build

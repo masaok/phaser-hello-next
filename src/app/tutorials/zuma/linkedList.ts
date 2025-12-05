@@ -177,7 +177,7 @@ export class LinkedList {
             return;
         }
         let current : Node = this.head as Node;
-        let result : any[] = [];
+        const result : any[] = [];
         for (let i : number = 0; i < this.size; i ++) {
             result.push(current.data);
             if (current.next) {
