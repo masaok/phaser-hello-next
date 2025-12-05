@@ -58,6 +58,9 @@ export default class QuestionBlock extends Phaser.Physics.Arcade.Sprite {
     })
 
     if (this.containsCoin) {
+      // Play coin sound
+      scene.sound.play('coin')
+
       // Spawn coin animation
       const coin = scene.add.sprite(this.x, this.y - 32, 'coin1')
       coin.setScale(2)

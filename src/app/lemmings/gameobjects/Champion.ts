@@ -191,6 +191,11 @@ export default class Champion extends Phaser.Physics.Arcade.Sprite {
       const body = bullet.body as Phaser.Physics.Arcade.Body
       body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed)
 
+      // Play minigun sound
+      if (this.scene.sound.get('minigun')) {
+        this.scene.sound.play('minigun', { volume: 0.3 })
+      }
+
       // Build stacks
       if (this.minigunStacks < this.maxMinigunStacks) {
         this.minigunStacks++
@@ -202,6 +207,11 @@ export default class Champion extends Phaser.Physics.Arcade.Sprite {
       rocket.setRotation(angle)
       rocket.setData('damage', this.attackDamage * 1.5)
       rocket.setData('type', 'rocket')
+
+      // Play rocket sound
+      if (this.scene.sound.get('rocket')) {
+        this.scene.sound.play('rocket', { volume: 0.4 })
+      }
       rocket.setData('aoe', true)
       rocket.setData('aoeRadius', 60)
 
@@ -256,6 +266,11 @@ export default class Champion extends Phaser.Physics.Arcade.Sprite {
       this.setTexture('champion-idle')
     }
 
+    // Play swap sound
+    if (this.scene.sound.get('swap')) {
+      this.scene.sound.play('swap', { volume: 0.4 })
+    }
+
     this.minigunStacks = 0
     this.qCooldown = this.qMaxCooldown
     return true
@@ -279,6 +294,11 @@ export default class Champion extends Phaser.Physics.Arcade.Sprite {
     const speed = 800
     const body = zap.body as Phaser.Physics.Arcade.Body
     body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed)
+
+    // Play zap sound
+    if (this.scene.sound.get('zap')) {
+      this.scene.sound.play('zap', { volume: 0.4 })
+    }
 
     this.mana -= 20
     this.wCooldown = this.wMaxCooldown
@@ -323,6 +343,11 @@ export default class Champion extends Phaser.Physics.Arcade.Sprite {
       })
     }
 
+    // Play trap sound
+    if (this.scene.sound.get('trap')) {
+      this.scene.sound.play('trap', { volume: 0.4 })
+    }
+
     this.mana -= 30
     this.eCooldown = this.eMaxCooldown
     return true
@@ -344,6 +369,11 @@ export default class Champion extends Phaser.Physics.Arcade.Sprite {
     megaRocket.setData('aoe', true)
     megaRocket.setData('aoeRadius', 120)
     megaRocket.setData('global', true) // Travels across map
+
+    // Play big rocket sound
+    if (this.scene.sound.get('rocket')) {
+      this.scene.sound.play('rocket', { volume: 0.6 })
+    }
 
     const speed = 500
     const body = megaRocket.body as Phaser.Physics.Arcade.Body

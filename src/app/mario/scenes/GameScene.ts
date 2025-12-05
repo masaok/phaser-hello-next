@@ -18,6 +18,12 @@ export default class GameScene extends Phaser.Scene {
   levelWidth: number = 3800
   isLevelComplete: boolean = false
 
+  // Sounds
+  jumpSound!: Phaser.Sound.BaseSound
+  coinSound!: Phaser.Sound.BaseSound
+  deadSound!: Phaser.Sound.BaseSound
+  themeMusic!: Phaser.Sound.BaseSound
+
   constructor() {
     super({ key: 'GameScene' })
   }
@@ -31,6 +37,12 @@ export default class GameScene extends Phaser.Scene {
     this.questionBlocks = []
     this.bricks = []
     this.isLevelComplete = false
+
+    // Load sounds
+    this.jumpSound = this.sound.add('jump')
+    this.coinSound = this.sound.add('coin')
+    this.deadSound = this.sound.add('dead')
+    this.themeMusic = this.sound.add('theme', { loop: true, volume: 0.5 })
 
     // Set world bounds
     this.physics.world.setBounds(0, 0, this.levelWidth, 600)
@@ -88,6 +100,9 @@ export default class GameScene extends Phaser.Scene {
 
     // UI
     this.createUI()
+
+    // Start music
+    this.themeMusic.play()
 
     // Fade in
     this.cameras.main.fadeIn(500)
@@ -417,6 +432,7 @@ export default class GameScene extends Phaser.Scene {
       g.stomp()
       m.bounce()
       this.addScore(100)
+      this.coinSound.play() // Use coin sound for stomp
     } else {
       // Mario takes damage
       m.takeDamage()
@@ -433,6 +449,7 @@ export default class GameScene extends Phaser.Scene {
     m.powerUp()
     mush.destroy()
     this.addScore(1000)
+    this.coinSound.play() // Power-up sound
   }
 
   handleLevelComplete(
@@ -442,6 +459,9 @@ export default class GameScene extends Phaser.Scene {
 
     this.isLevelComplete = true
     const m = mario as Mario
+
+    // Stop music
+    this.themeMusic.stop()
 
     // Stop Mario
     const marioBody = m.body as Phaser.Physics.Arcade.Body

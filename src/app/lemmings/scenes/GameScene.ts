@@ -333,6 +333,11 @@ export default class GameScene extends Phaser.Scene {
     const isAoe = proj.getData('aoe') as boolean
     const slow = proj.getData('slow') as boolean
 
+    // Play hit sound
+    if (this.sound.get('hit')) {
+      this.sound.play('hit', { volume: 0.3 })
+    }
+
     // Apply damage
     const killed = target.takeDamage(damage, slow)
 
@@ -344,6 +349,17 @@ export default class GameScene extends Phaser.Scene {
     if (isAoe) {
       const aoeRadius = proj.getData('aoeRadius') as number
       this.createExplosion(proj.x, proj.y, type === 'mega-rocket')
+
+      // Play explosion sound
+      if (type === 'mega-rocket') {
+        if (this.sound.get('big-explosion')) {
+          this.sound.play('big-explosion', { volume: 0.5 })
+        }
+      } else {
+        if (this.sound.get('explosion')) {
+          this.sound.play('explosion', { volume: 0.4 })
+        }
+      }
 
       // Damage nearby dummies
       this.dummies.children.iterate((child) => {
@@ -381,6 +397,11 @@ export default class GameScene extends Phaser.Scene {
 
     // Create explosion effect
     this.createExplosion(t.x, t.y, false)
+
+    // Play explosion sound
+    if (this.sound.get('explosion')) {
+      this.sound.play('explosion', { volume: 0.4 })
+    }
 
     // Apply damage and root
     const killed = target.takeDamage(damage, true)

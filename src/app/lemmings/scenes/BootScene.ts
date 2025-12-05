@@ -11,10 +11,144 @@ export default class BootScene extends Phaser.Scene {
     this.createEffectSprites()
     this.createDummySprite()
     this.createUISprites()
+    this.createSounds()
   }
 
   create() {
     this.scene.start('GameScene')
+  }
+
+  createSounds() {
+    // Generate sounds programmatically using Web Audio API
+    const audioContext = new AudioContext()
+
+    // Minigun shot - short, sharp sound
+    this.generateSound(audioContext, 'minigun', 0.05, 800, 'square', 0.3)
+
+    // Rocket launch - lower, longer
+    this.generateSound(audioContext, 'rocket', 0.15, 200, 'sawtooth', 0.4)
+
+    // Zap - electric sound
+    this.generateSound(audioContext, 'zap', 0.2, 1200, 'square', 0.3)
+
+    // Trap place
+    this.generateSound(audioContext, 'trap', 0.1, 400, 'triangle', 0.3)
+
+    // Explosion
+    this.generateSound(audioContext, 'explosion', 0.3, 100, 'sawtooth', 0.5)
+
+    // Big explosion
+    this.generateSound(audioContext, 'big-explosion', 0.5, 80, 'sawtooth', 0.6)
+
+    // Weapon swap
+    this.generateSound(audioContext, 'swap', 0.1, 600, 'sine', 0.3)
+
+    // Hit marker
+    this.generateSound(audioContext, 'hit', 0.05, 500, 'square', 0.2)
+  }
+
+  generateSound(
+    audioContext: AudioContext,
+    key: string,
+    duration: number,
+    frequency: number,
+    waveType: OscillatorType,
+    volume: number
+  ) {
+    const sampleRate = audioContext.sampleRate
+    const numSamples = Math.floor(sampleRate * duration)
+    const buffer = audioContext.createBuffer(1, numSamples, sampleRate)
+    const data = buffer.getChannelData(0)
+
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate
+      let sample = 0
+
+      // Generate waveform
+      const phase = 2 * Math.PI * frequency * t
+
+      switch (waveType) {
+        case 'sine':
+          sample = Math.sin(phase)
+          break
+        case 'square':
+          sample = Math.sin(phase) > 0 ? 1 : -1
+          break
+        case 'sawtooth':
+          sample = 2 * ((frequency * t) % 1) - 1
+          break
+        case 'triangle':
+          sample = 2 * Math.abs(2 * ((frequency * t) % 1) - 1) - 1
+          break
+      }
+
+      // Apply envelope (fade out)
+      const envelope = 1 - (i / numSamples)
+      sample *= envelope * volume
+
+      // Add some noise for explosion sounds
+      if (key.includes('explosion')) {
+        sample += (Math.random() * 2 - 1) * 0.3 * envelope
+      }
+
+      data[i] = sample
+    }
+
+    // Convert to audio blob and create Phaser sound
+    const wavData = this.encodeWAV(buffer)
+    const blob = new Blob([wavData], { type: 'audio/wav' })
+    const url = URL.createObjectURL(blob)
+
+    this.load.audio(key, url)
+    this.load.start()
+  }
+
+  encodeWAV(buffer: AudioBuffer): ArrayBuffer {
+    const numChannels = 1
+    const sampleRate = buffer.sampleRate
+    const format = 1 // PCM
+    const bitDepth = 16
+    const numSamples = buffer.length
+
+    const byteRate = sampleRate * numChannels * (bitDepth / 8)
+    const blockAlign = numChannels * (bitDepth / 8)
+    const dataSize = numSamples * blockAlign
+
+    const headerSize = 44
+    const arrayBuffer = new ArrayBuffer(headerSize + dataSize)
+    const view = new DataView(arrayBuffer)
+
+    // WAV header
+    this.writeString(view, 0, 'RIFF')
+    view.setUint32(4, 36 + dataSize, true)
+    this.writeString(view, 8, 'WAVE')
+    this.writeString(view, 12, 'fmt ')
+    view.setUint32(16, 16, true)
+    view.setUint16(20, format, true)
+    view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, byteRate, true)
+    view.setUint16(32, blockAlign, true)
+    view.setUint16(34, bitDepth, true)
+    this.writeString(view, 36, 'data')
+    view.setUint32(40, dataSize, true)
+
+    // Audio data
+    const channelData = buffer.getChannelData(0)
+    let offset = 44
+    for (let i = 0; i < numSamples; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]))
+      view.setInt16(offset, sample * 0x7fff, true)
+      offset += 2
+    }
+
+    return arrayBuffer
+  }
+
+  writeString(view: DataView, offset: number, str: string) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i))
+    }
   }
 
   createChampionSprites() {

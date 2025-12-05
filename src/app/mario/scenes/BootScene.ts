@@ -6,6 +6,12 @@ export default class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    // Load sounds
+    this.load.audio('jump', '/assets/sounds/jump.mp3')
+    this.load.audio('coin', '/assets/sounds/coin.mp3')
+    this.load.audio('dead', '/assets/sounds/dead.mp3')
+    this.load.audio('theme', '/assets/sounds/theme.mp3')
+
     // Create all sprites programmatically
     this.createMarioSprite()
     this.createGoombaSprite()

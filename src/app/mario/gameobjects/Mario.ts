@@ -50,6 +50,7 @@ export default class Mario extends Phaser.Physics.Arcade.Sprite {
     if ((this.cursors?.up.isDown || this.spaceKey?.isDown) && onGround) {
       body.setVelocityY(-580)
       this.isJumping = true
+      this.scene.sound.play('jump')
     }
 
     // Variable jump height
@@ -91,6 +92,10 @@ export default class Mario extends Phaser.Physics.Arcade.Sprite {
 
     this.isDead = true
     this.setTexture('mario-dead')
+
+    // Stop music and play death sound
+    this.scene.sound.stopAll()
+    this.scene.sound.play('dead')
 
     const body = this.body as Phaser.Physics.Arcade.Body
     body.setVelocity(0, -400)
