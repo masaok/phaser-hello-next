@@ -12,12 +12,33 @@ interface CameraControllerProps {
 
 // LoL-style camera angle (56 degrees from horizontal)
 const CAMERA_ANGLE = 56 * (Math.PI / 180)
-const MIN_ZOOM = 30
+const CLOSE_UP_ANGLE = 15 * (Math.PI / 180) // More level angle for close-up view
+const MIN_ZOOM = 6.5 // Allow even closer zoom (15% more)
 const MAX_ZOOM = 200
 const DEFAULT_ZOOM = 50
+const CLOSE_UP_THRESHOLD = 0.05 // Last 5% of zoom range for close-up mode
 const PAN_SPEED = 0.5
 const EDGE_PAN_ZONE = 50 // pixels from screen edge
 const EDGE_PAN_SPEED = 500 // 500% faster edge panning
+
+// Calculate camera angle based on zoom level
+// In the last 5% of zoom (closest), transition to a more level angle
+function getCameraAngle(zoom: number): number {
+  const zoomRange = MAX_ZOOM - MIN_ZOOM
+  const closeUpStart = MIN_ZOOM + zoomRange * CLOSE_UP_THRESHOLD // Start transitioning at 5% from min
+
+  if (zoom <= MIN_ZOOM) {
+    return CLOSE_UP_ANGLE
+  } else if (zoom >= closeUpStart) {
+    return CAMERA_ANGLE
+  } else {
+    // Smoothly interpolate between close-up angle and normal angle
+    const t = (zoom - MIN_ZOOM) / (closeUpStart - MIN_ZOOM)
+    // Use easeInOut for smooth transition
+    const smoothT = t * t * (3 - 2 * t)
+    return CLOSE_UP_ANGLE + (CAMERA_ANGLE - CLOSE_UP_ANGLE) * smoothT
+  }
+}
 
 export default function CameraController({
   championPosition,
@@ -33,12 +54,20 @@ export default function CameraController({
 
   // Set up camera position based on zoom and angle
   useEffect(() => {
-    const distance = zoom / Math.tan(CAMERA_ANGLE)
+    const currentAngle = getCameraAngle(zoom)
+    const distance = zoom / Math.tan(currentAngle)
     const targetX = isFollowing ? championPosition[0] : cameraTarget[0]
     const targetZ = isFollowing ? championPosition[2] : cameraTarget[2]
 
+    // For close-up view, look at character's face height instead of ground
+    const zoomRange = MAX_ZOOM - MIN_ZOOM
+    const closeUpStart = MIN_ZOOM + zoomRange * CLOSE_UP_THRESHOLD
+    const lookAtHeight = zoom < closeUpStart
+      ? 1.0 * (1 - (zoom - MIN_ZOOM) / (closeUpStart - MIN_ZOOM)) // Transition to looking at face
+      : 0
+
     camera.position.set(targetX, zoom, targetZ + distance)
-    camera.lookAt(targetX, 0, targetZ)
+    camera.lookAt(targetX, lookAtHeight, targetZ)
 
     // Calculate visible viewport on the ground plane
     // Use the camera's FOV and aspect ratio to determine visible area
