@@ -15,7 +15,7 @@ const MAX_ZOOM = 200
 const DEFAULT_ZOOM = 50
 const PAN_SPEED = 0.5
 const EDGE_PAN_ZONE = 50 // pixels from screen edge
-const EDGE_PAN_SPEED = 100
+const EDGE_PAN_SPEED = 500 // 500% faster edge panning
 
 export default function CameraController({ championPosition, onViewportChange }: CameraControllerProps & { onViewportChange?: (viewport: { x: number; z: number; width: number; height: number }) => void }) {
   const { camera, gl } = useThree()
@@ -72,10 +72,22 @@ export default function CameraController({ championPosition, onViewportChange }:
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current.add(e.key.toLowerCase())
 
-      // Spacebar or Y key to toggle camera lock
-      if (e.key === ' ' || e.key.toLowerCase() === 'y') {
+      // Y key toggles camera lock on/off
+      if (e.key.toLowerCase() === 'y') {
         setIsFollowing(prev => !prev)
         if (!isFollowing) {
+          setCameraTarget([championPosition[0], 0, championPosition[2]])
+        }
+      }
+
+      // Spacebar: in locked mode toggles to unlocked, in unlocked mode recenters on Jinx
+      if (e.key === ' ') {
+        if (isFollowing) {
+          // Currently locked - unlock
+          setIsFollowing(false)
+          setCameraTarget([championPosition[0], 0, championPosition[2]])
+        } else {
+          // Currently unlocked - recenter camera on Jinx (but stay unlocked)
           setCameraTarget([championPosition[0], 0, championPosition[2]])
         }
       }
