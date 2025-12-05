@@ -16,26 +16,25 @@ interface MinionProps {
 export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
+  // Store initial rotation in a stable ref (not re-calculated on re-render)
+  const initialRotation = useRef(rotation || Math.random() * Math.PI * 2)
 
   // Team colors
   const hoodColor = isBlue ? "#2060a0" : "#a02020"
   const hoodDark = isBlue ? "#1a4a80" : "#801818"
-  const hoodLight = isBlue ? "#3080c0" : "#c03030"
   const metalLight = "#b0b0b0"
   const metalMid = "#808080"
-  const metalDark = "#505050"
   const woodColor = "#6a4a30"
-  const woodDark = "#4a3020"
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
     animTime.current += delta * 2
-    // Idle bobbing
-    groupRef.current.position.y = position[1] + Math.sin(animTime.current) * 0.05
+    // Idle bobbing - slow and smooth
+    groupRef.current.position.y = position[1] + Math.sin(animTime.current) * 0.08
   })
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, rotation, 0]} scale={[2.4, 2.4, 2.4]}>
+    <group ref={groupRef} position={position} rotation={[0, initialRotation.current, 0]} scale={[2.4, 2.4, 2.4]}>
       {/* Hood main body */}
       <mesh position={[0, 0.9, 0]} castShadow>
         <sphereGeometry args={[0.35, 16, 16]} />
@@ -177,6 +176,7 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const crystalRef = useRef<THREE.Mesh>(null)
+  const initialRotation = useRef(rotation || Math.random() * Math.PI * 2)
 
   // Team colors
   const robeColor = isBlue ? "#2080c0" : "#c02040"
@@ -188,15 +188,17 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   useFrame((_, delta) => {
     if (!groupRef.current) return
     animTime.current += delta * 2
-    groupRef.current.position.y = position[1] + Math.sin(animTime.current) * 0.05
+    // Smooth idle bobbing
+    groupRef.current.position.y = position[1] + Math.sin(animTime.current) * 0.08
 
+    // Slow crystal rotation
     if (crystalRef.current) {
-      crystalRef.current.rotation.y += delta * 2
+      crystalRef.current.rotation.y += delta * 1.5
     }
   })
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, rotation, 0]} scale={[2.4, 2.4, 2.4]}>
+    <group ref={groupRef} position={position} rotation={[0, initialRotation.current, 0]} scale={[2.4, 2.4, 2.4]}>
       {/* Hood main */}
       <mesh position={[0, 0.95, 0]} castShadow>
         <sphereGeometry args={[0.3, 16, 16]} />
@@ -323,6 +325,7 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
 export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
+  const initialRotation = useRef(rotation || Math.random() * Math.PI * 2)
 
   // Team colors
   const capeColor = isBlue ? "#2060a0" : "#a02020"
@@ -333,11 +336,12 @@ export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   useFrame((_, delta) => {
     if (!groupRef.current) return
     animTime.current += delta * 1.5
-    groupRef.current.rotation.z = Math.sin(animTime.current) * 0.02
+    // Very subtle cart wobble
+    groupRef.current.rotation.z = Math.sin(animTime.current) * 0.015
   })
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, rotation, 0]} scale={[2.7, 2.7, 2.7]}>
+    <group ref={groupRef} position={position} rotation={[0, initialRotation.current, 0]} scale={[2.7, 2.7, 2.7]}>
       {/* Cart body */}
       <mesh position={[0, 0.35, 0]} castShadow>
         <boxGeometry args={[0.8, 0.3, 0.6]} />
@@ -465,24 +469,24 @@ export function MapMinions({ mapSize }: MinionsProps) {
     <group>
       {/* Blue team minions */}
       {blueMeleePositions.map((pos, i) => (
-        <MeleeMinion key={`blue-melee-${i}`} position={pos} isBlue={true} rotation={Math.random() * Math.PI * 2} />
+        <MeleeMinion key={`blue-melee-${i}`} position={pos} isBlue={true} />
       ))}
       {blueCasterPositions.map((pos, i) => (
-        <CasterMinion key={`blue-caster-${i}`} position={pos} isBlue={true} rotation={Math.random() * Math.PI * 2} />
+        <CasterMinion key={`blue-caster-${i}`} position={pos} isBlue={true} />
       ))}
       {blueCannonPositions.map((pos, i) => (
-        <CannonMinion key={`blue-cannon-${i}`} position={pos} isBlue={true} rotation={Math.random() * Math.PI * 2} />
+        <CannonMinion key={`blue-cannon-${i}`} position={pos} isBlue={true} />
       ))}
 
       {/* Red team minions */}
       {redMeleePositions.map((pos, i) => (
-        <MeleeMinion key={`red-melee-${i}`} position={pos} isBlue={false} rotation={Math.random() * Math.PI * 2} />
+        <MeleeMinion key={`red-melee-${i}`} position={pos} isBlue={false} />
       ))}
       {redCasterPositions.map((pos, i) => (
-        <CasterMinion key={`red-caster-${i}`} position={pos} isBlue={false} rotation={Math.random() * Math.PI * 2} />
+        <CasterMinion key={`red-caster-${i}`} position={pos} isBlue={false} />
       ))}
       {redCannonPositions.map((pos, i) => (
-        <CannonMinion key={`red-cannon-${i}`} position={pos} isBlue={false} rotation={Math.random() * Math.PI * 2} />
+        <CannonMinion key={`red-cannon-${i}`} position={pos} isBlue={false} />
       ))}
     </group>
   )

@@ -265,7 +265,7 @@ export function resolveCollision(
   // Binary search to find the farthest valid position along the path
   let validX = currentX
   let validZ = currentZ
-  let steps = 10
+  const steps = 10
 
   for (let i = 1; i <= steps; i++) {
     const t = i / steps
