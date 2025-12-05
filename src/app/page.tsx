@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { Suspense } from 'react'
 
 const PhaserGame = dynamic(() => import('../games/PhaserGame'), {
@@ -24,6 +25,12 @@ export default function Home() {
       <Suspense fallback={<GameLoader />}>
         <PhaserGame />
       </Suspense>
+      <Link
+        href="/mario"
+        className="mt-6 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors"
+      >
+        Play Mario
+      </Link>
       <p className="mt-6 text-slate-500 text-sm">
         Built with Phaser 3.90 and Next.js 16
       </p>
