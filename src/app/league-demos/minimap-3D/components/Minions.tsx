@@ -16,8 +16,15 @@ interface MinionProps {
 export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
-  // Store initial rotation in a stable ref (not re-calculated on re-render)
-  const initialRotation = useRef(rotation || Math.random() * Math.PI * 2)
+  const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
+
+  // Wandering state
+  const posX = useRef(position[0])
+  const posZ = useRef(position[2])
+  const moveDirection = useRef(Math.random() * Math.PI * 2)
+  const moveTimer = useRef(Math.random() * 3) // Time until direction change
+  const isPaused = useRef(false)
+  const pauseTimer = useRef(0)
 
   // Team colors
   const hoodColor = isBlue ? "#2060a0" : "#a02020"
@@ -26,15 +33,59 @@ export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const metalMid = "#808080"
   const woodColor = "#6a4a30"
 
+  const MOVE_SPEED = 2 // Units per second
+  const WANDER_RADIUS = 15 // Max distance from spawn
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
     animTime.current += delta * 2
-    // Idle bobbing - slow and smooth
+
+    // Handle pausing
+    if (isPaused.current) {
+      pauseTimer.current -= delta
+      if (pauseTimer.current <= 0) {
+        isPaused.current = false
+        moveDirection.current = Math.random() * Math.PI * 2
+        moveTimer.current = 2 + Math.random() * 3
+      }
+    } else {
+      // Move in current direction
+      posX.current += Math.sin(moveDirection.current) * MOVE_SPEED * delta
+      posZ.current += Math.cos(moveDirection.current) * MOVE_SPEED * delta
+
+      // Keep within wander radius of spawn
+      const dx = posX.current - position[0]
+      const dz = posZ.current - position[2]
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      if (dist > WANDER_RADIUS) {
+        // Turn back toward spawn
+        moveDirection.current = Math.atan2(-dx, -dz)
+      }
+
+      // Smoothly rotate to face movement direction
+      const targetRot = moveDirection.current
+      let rotDiff = targetRot - currentRotation.current
+      if (rotDiff > Math.PI) rotDiff -= Math.PI * 2
+      if (rotDiff < -Math.PI) rotDiff += Math.PI * 2
+      currentRotation.current += rotDiff * delta * 3
+
+      // Timer for direction change
+      moveTimer.current -= delta
+      if (moveTimer.current <= 0) {
+        isPaused.current = true
+        pauseTimer.current = 0.5 + Math.random() * 1.5
+      }
+    }
+
+    // Apply position and rotation
+    groupRef.current.position.x = posX.current
+    groupRef.current.position.z = posZ.current
     groupRef.current.position.y = position[1] + Math.sin(animTime.current) * 0.08
+    groupRef.current.rotation.y = currentRotation.current
   })
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, initialRotation.current, 0]} scale={[2.4, 2.4, 2.4]}>
+    <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]}>
       {/* Hood main body */}
       <mesh position={[0, 0.9, 0]} castShadow>
         <sphereGeometry args={[0.35, 16, 16]} />
@@ -176,7 +227,15 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const crystalRef = useRef<THREE.Mesh>(null)
-  const initialRotation = useRef(rotation || Math.random() * Math.PI * 2)
+  const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
+
+  // Wandering state
+  const posX = useRef(position[0])
+  const posZ = useRef(position[2])
+  const moveDirection = useRef(Math.random() * Math.PI * 2)
+  const moveTimer = useRef(Math.random() * 3)
+  const isPaused = useRef(false)
+  const pauseTimer = useRef(0)
 
   // Team colors
   const robeColor = isBlue ? "#2080c0" : "#c02040"
@@ -185,11 +244,49 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const metalLight = "#b0b0b0"
   const metalMid = "#808080"
 
+  const MOVE_SPEED = 1.5 // Casters move slower
+  const WANDER_RADIUS = 12
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
     animTime.current += delta * 2
-    // Smooth idle bobbing
+
+    // Handle pausing
+    if (isPaused.current) {
+      pauseTimer.current -= delta
+      if (pauseTimer.current <= 0) {
+        isPaused.current = false
+        moveDirection.current = Math.random() * Math.PI * 2
+        moveTimer.current = 2 + Math.random() * 4
+      }
+    } else {
+      posX.current += Math.sin(moveDirection.current) * MOVE_SPEED * delta
+      posZ.current += Math.cos(moveDirection.current) * MOVE_SPEED * delta
+
+      const dx = posX.current - position[0]
+      const dz = posZ.current - position[2]
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      if (dist > WANDER_RADIUS) {
+        moveDirection.current = Math.atan2(-dx, -dz)
+      }
+
+      const targetRot = moveDirection.current
+      let rotDiff = targetRot - currentRotation.current
+      if (rotDiff > Math.PI) rotDiff -= Math.PI * 2
+      if (rotDiff < -Math.PI) rotDiff += Math.PI * 2
+      currentRotation.current += rotDiff * delta * 3
+
+      moveTimer.current -= delta
+      if (moveTimer.current <= 0) {
+        isPaused.current = true
+        pauseTimer.current = 1 + Math.random() * 2
+      }
+    }
+
+    groupRef.current.position.x = posX.current
+    groupRef.current.position.z = posZ.current
     groupRef.current.position.y = position[1] + Math.sin(animTime.current) * 0.08
+    groupRef.current.rotation.y = currentRotation.current
 
     // Slow crystal rotation
     if (crystalRef.current) {
@@ -198,7 +295,7 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   })
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, initialRotation.current, 0]} scale={[2.4, 2.4, 2.4]}>
+    <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]}>
       {/* Hood main */}
       <mesh position={[0, 0.95, 0]} castShadow>
         <sphereGeometry args={[0.3, 16, 16]} />
@@ -325,7 +422,15 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
 export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
-  const initialRotation = useRef(rotation || Math.random() * Math.PI * 2)
+  const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
+
+  // Wandering state
+  const posX = useRef(position[0])
+  const posZ = useRef(position[2])
+  const moveDirection = useRef(Math.random() * Math.PI * 2)
+  const moveTimer = useRef(Math.random() * 3)
+  const isPaused = useRef(false)
+  const pauseTimer = useRef(0)
 
   // Team colors
   const capeColor = isBlue ? "#2060a0" : "#a02020"
@@ -333,15 +438,54 @@ export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const metalMid = "#505860"
   const metalDark = "#383c42"
 
+  const MOVE_SPEED = 1 // Cannons move slowest
+  const WANDER_RADIUS = 10
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
     animTime.current += delta * 1.5
+
+    // Handle pausing
+    if (isPaused.current) {
+      pauseTimer.current -= delta
+      if (pauseTimer.current <= 0) {
+        isPaused.current = false
+        moveDirection.current = Math.random() * Math.PI * 2
+        moveTimer.current = 3 + Math.random() * 4
+      }
+    } else {
+      posX.current += Math.sin(moveDirection.current) * MOVE_SPEED * delta
+      posZ.current += Math.cos(moveDirection.current) * MOVE_SPEED * delta
+
+      const dx = posX.current - position[0]
+      const dz = posZ.current - position[2]
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      if (dist > WANDER_RADIUS) {
+        moveDirection.current = Math.atan2(-dx, -dz)
+      }
+
+      const targetRot = moveDirection.current
+      let rotDiff = targetRot - currentRotation.current
+      if (rotDiff > Math.PI) rotDiff -= Math.PI * 2
+      if (rotDiff < -Math.PI) rotDiff += Math.PI * 2
+      currentRotation.current += rotDiff * delta * 2 // Slower rotation for cart
+
+      moveTimer.current -= delta
+      if (moveTimer.current <= 0) {
+        isPaused.current = true
+        pauseTimer.current = 1.5 + Math.random() * 2.5
+      }
+    }
+
+    groupRef.current.position.x = posX.current
+    groupRef.current.position.z = posZ.current
+    groupRef.current.rotation.y = currentRotation.current
     // Very subtle cart wobble
     groupRef.current.rotation.z = Math.sin(animTime.current) * 0.015
   })
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, initialRotation.current, 0]} scale={[2.7, 2.7, 2.7]}>
+    <group ref={groupRef} position={position} scale={[2.7, 2.7, 2.7]}>
       {/* Cart body */}
       <mesh position={[0, 0.35, 0]} castShadow>
         <boxGeometry args={[0.8, 0.3, 0.6]} />
