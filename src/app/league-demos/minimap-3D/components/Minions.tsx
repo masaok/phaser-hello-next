@@ -1,22 +1,58 @@
 'use client'
 
-import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useRef, useState } from 'react'
+import { useFrame, ThreeEvent } from '@react-three/fiber'
+import { Billboard } from '@react-three/drei'
 import * as THREE from 'three'
+
+const MAX_HP = 50
+const DAMAGE_PER_HIT = 10
 
 interface MinionProps {
   position: [number, number, number]
   isBlue: boolean
   rotation?: number
+  id: string
+  onMinionClick?: (id: string, position: [number, number, number]) => void
+  hp?: number
+  onTakeDamage?: (id: string, newHp: number) => void
+}
+
+// HP Bar component for minions
+function MinionHPBar({ hp, maxHp, isBlue }: { hp: number; maxHp: number; isBlue: boolean }) {
+  const hpPercent = hp / maxHp
+  const barColor = isBlue ? "#22aaff" : "#ff4444"
+  const bgColor = "#333333"
+
+  return (
+    <Billboard position={[0, 2.2, 0]} follow={true} lockX={false} lockY={false} lockZ={false}>
+      {/* Background */}
+      <mesh position={[0, 0, -0.01]}>
+        <planeGeometry args={[1.2, 0.15]} />
+        <meshBasicMaterial color="#000000" />
+      </mesh>
+      <mesh position={[0, 0, 0]}>
+        <planeGeometry args={[1.1, 0.1]} />
+        <meshBasicMaterial color={bgColor} />
+      </mesh>
+      {/* HP fill */}
+      <mesh position={[-0.55 + (hpPercent * 0.55), 0, 0.01]}>
+        <planeGeometry args={[1.1 * hpPercent, 0.08]} />
+        <meshBasicMaterial color={barColor} />
+      </mesh>
+    </Billboard>
+  )
 }
 
 // ============================================
 // MELEE MINION - Red/Blue hooded warrior with axe and shield
 // ============================================
-export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
+export function MeleeMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
+  const [isDying, setIsDying] = useState(false)
+  const deathProgress = useRef(0)
 
   // Wandering state
   const posX = useRef(position[0])
@@ -36,8 +72,32 @@ export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const MOVE_SPEED = 2 // Units per second
   const WANDER_RADIUS = 15 // Max distance from spawn
 
+  // Handle click
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (onMinionClick && !isDying) {
+      onMinionClick(id, [posX.current, 0, posZ.current])
+    }
+  }
+
+  // Trigger death animation when HP reaches 0
+  if (hp <= 0 && !isDying) {
+    setIsDying(true)
+  }
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
+
+    // Death animation
+    if (isDying) {
+      deathProgress.current += delta * 2
+      const scale = Math.max(0, 1 - deathProgress.current)
+      groupRef.current.scale.set(2.4 * scale, 2.4 * scale, 2.4 * scale)
+      groupRef.current.position.y = position[1] - deathProgress.current * 2
+      groupRef.current.rotation.x = deathProgress.current * 0.5
+      return
+    }
+
     animTime.current += delta * 2
 
     // Handle pausing
@@ -84,8 +144,16 @@ export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
     groupRef.current.rotation.y = currentRotation.current
   })
 
+  // Don't render if death animation complete
+  if (isDying && deathProgress.current >= 1) {
+    return null
+  }
+
   return (
-    <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]}>
+    <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]} onClick={handleClick}>
+      {/* HP Bar */}
+      {!isDying && <MinionHPBar hp={hp} maxHp={MAX_HP} isBlue={isBlue} />}
+
       {/* Hood main body */}
       <mesh position={[0, 0.9, 0]} castShadow>
         <sphereGeometry args={[0.35, 16, 16]} />
@@ -223,11 +291,13 @@ export function MeleeMinion({ position, isBlue, rotation = 0 }: MinionProps) {
 // ============================================
 // CASTER MINION - Blue/Red robed mage with crystal staff
 // ============================================
-export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
+export function CasterMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const crystalRef = useRef<THREE.Mesh>(null)
   const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
+  const [isDying, setIsDying] = useState(false)
+  const deathProgress = useRef(0)
 
   // Wandering state
   const posX = useRef(position[0])
@@ -247,8 +317,32 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const MOVE_SPEED = 1.5 // Casters move slower
   const WANDER_RADIUS = 12
 
+  // Handle click
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (onMinionClick && !isDying) {
+      onMinionClick(id, [posX.current, 0, posZ.current])
+    }
+  }
+
+  // Trigger death animation when HP reaches 0
+  if (hp <= 0 && !isDying) {
+    setIsDying(true)
+  }
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
+
+    // Death animation
+    if (isDying) {
+      deathProgress.current += delta * 2
+      const scale = Math.max(0, 1 - deathProgress.current)
+      groupRef.current.scale.set(2.4 * scale, 2.4 * scale, 2.4 * scale)
+      groupRef.current.position.y = position[1] - deathProgress.current * 2
+      groupRef.current.rotation.x = deathProgress.current * 0.5
+      return
+    }
+
     animTime.current += delta * 2
 
     // Handle pausing
@@ -294,8 +388,16 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
     }
   })
 
+  // Don't render if death animation complete
+  if (isDying && deathProgress.current >= 1) {
+    return null
+  }
+
   return (
-    <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]}>
+    <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]} onClick={handleClick}>
+      {/* HP Bar */}
+      {!isDying && <MinionHPBar hp={hp} maxHp={MAX_HP} isBlue={isBlue} />}
+
       {/* Hood main */}
       <mesh position={[0, 0.95, 0]} castShadow>
         <sphereGeometry args={[0.3, 16, 16]} />
@@ -419,10 +521,12 @@ export function CasterMinion({ position, isBlue, rotation = 0 }: MinionProps) {
 // ============================================
 // CANNON MINION - Rides in wheeled cannon cart
 // ============================================
-export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
+export function CannonMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
+  const [isDying, setIsDying] = useState(false)
+  const deathProgress = useRef(0)
 
   // Wandering state
   const posX = useRef(position[0])
@@ -441,8 +545,32 @@ export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
   const MOVE_SPEED = 1 // Cannons move slowest
   const WANDER_RADIUS = 10
 
+  // Handle click
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (onMinionClick && !isDying) {
+      onMinionClick(id, [posX.current, 0, posZ.current])
+    }
+  }
+
+  // Trigger death animation when HP reaches 0
+  if (hp <= 0 && !isDying) {
+    setIsDying(true)
+  }
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
+
+    // Death animation
+    if (isDying) {
+      deathProgress.current += delta * 2
+      const scale = Math.max(0, 1 - deathProgress.current)
+      groupRef.current.scale.set(2.7 * scale, 2.7 * scale, 2.7 * scale)
+      groupRef.current.position.y = position[1] - deathProgress.current * 2
+      groupRef.current.rotation.x = deathProgress.current * 0.5
+      return
+    }
+
     animTime.current += delta * 1.5
 
     // Handle pausing
@@ -484,8 +612,16 @@ export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
     groupRef.current.rotation.z = Math.sin(animTime.current) * 0.015
   })
 
+  // Don't render if death animation complete
+  if (isDying && deathProgress.current >= 1) {
+    return null
+  }
+
   return (
-    <group ref={groupRef} position={position} scale={[2.7, 2.7, 2.7]}>
+    <group ref={groupRef} position={position} scale={[2.7, 2.7, 2.7]} onClick={handleClick}>
+      {/* HP Bar */}
+      {!isDying && <MinionHPBar hp={hp} maxHp={MAX_HP} isBlue={isBlue} />}
+
       {/* Cart body */}
       <mesh position={[0, 0.35, 0]} castShadow>
         <boxGeometry args={[0.8, 0.3, 0.6]} />
@@ -567,71 +703,172 @@ export function CannonMinion({ position, isBlue, rotation = 0 }: MinionProps) {
 }
 
 // ============================================
+// MINION DATA TYPES
+// ============================================
+export interface MinionData {
+  id: string
+  type: 'melee' | 'caster' | 'cannon'
+  position: [number, number, number]
+  isBlue: boolean
+  hp: number
+  isDead: boolean
+}
+
+// ============================================
 // MINION SPAWNER - Places minions around map
 // ============================================
 interface MinionsProps {
   mapSize: number
+  minions: MinionData[]
+  onMinionClick: (id: string, position: [number, number, number]) => void
 }
 
-export function MapMinions({ mapSize }: MinionsProps) {
-  const halfSize = mapSize / 2
+export function MapMinions({ minions, onMinionClick }: MinionsProps) {
+  return (
+    <group>
+      {minions.map((minion) => {
+        if (minion.isDead) return null
 
-  // Define minion positions for each team (reduced by 50%)
-  // Blue team minions - bottom left area
+        switch (minion.type) {
+          case 'melee':
+            return (
+              <MeleeMinion
+                key={minion.id}
+                id={minion.id}
+                position={minion.position}
+                isBlue={minion.isBlue}
+                hp={minion.hp}
+                onMinionClick={onMinionClick}
+              />
+            )
+          case 'caster':
+            return (
+              <CasterMinion
+                key={minion.id}
+                id={minion.id}
+                position={minion.position}
+                isBlue={minion.isBlue}
+                hp={minion.hp}
+                onMinionClick={onMinionClick}
+              />
+            )
+          case 'cannon':
+            return (
+              <CannonMinion
+                key={minion.id}
+                id={minion.id}
+                position={minion.position}
+                isBlue={minion.isBlue}
+                hp={minion.hp}
+                onMinionClick={onMinionClick}
+              />
+            )
+        }
+      })}
+    </group>
+  )
+}
+
+// Helper function to create initial minion data
+export function createInitialMinions(mapSize: number): MinionData[] {
+  const halfSize = mapSize / 2
+  const minions: MinionData[] = []
+
+  // Blue team melee minions
   const blueMeleePositions: [number, number, number][] = [
     [-halfSize + 30, 0, halfSize - 30],
     [-halfSize + 40, 0, 20],
     [-20, 0, halfSize - 25],
   ]
+  blueMeleePositions.forEach((pos, i) => {
+    minions.push({
+      id: `blue-melee-${i}`,
+      type: 'melee',
+      position: pos,
+      isBlue: true,
+      hp: MAX_HP,
+      isDead: false,
+    })
+  })
 
+  // Blue team caster minions
   const blueCasterPositions: [number, number, number][] = [
     [-halfSize + 32, 0, halfSize - 35],
     [-halfSize + 42, 0, 15],
   ]
+  blueCasterPositions.forEach((pos, i) => {
+    minions.push({
+      id: `blue-caster-${i}`,
+      type: 'caster',
+      position: pos,
+      isBlue: true,
+      hp: MAX_HP,
+      isDead: false,
+    })
+  })
 
+  // Blue team cannon minions
   const blueCannonPositions: [number, number, number][] = [
     [-halfSize + 28, 0, halfSize - 38],
   ]
+  blueCannonPositions.forEach((pos, i) => {
+    minions.push({
+      id: `blue-cannon-${i}`,
+      type: 'cannon',
+      position: pos,
+      isBlue: true,
+      hp: MAX_HP,
+      isDead: false,
+    })
+  })
 
-  // Red team minions - top right area
+  // Red team melee minions
   const redMeleePositions: [number, number, number][] = [
     [halfSize - 30, 0, -halfSize + 30],
     [halfSize - 40, 0, -20],
     [20, 0, -halfSize + 25],
   ]
+  redMeleePositions.forEach((pos, i) => {
+    minions.push({
+      id: `red-melee-${i}`,
+      type: 'melee',
+      position: pos,
+      isBlue: false,
+      hp: MAX_HP,
+      isDead: false,
+    })
+  })
 
+  // Red team caster minions
   const redCasterPositions: [number, number, number][] = [
     [halfSize - 32, 0, -halfSize + 35],
     [halfSize - 42, 0, -15],
   ]
+  redCasterPositions.forEach((pos, i) => {
+    minions.push({
+      id: `red-caster-${i}`,
+      type: 'caster',
+      position: pos,
+      isBlue: false,
+      hp: MAX_HP,
+      isDead: false,
+    })
+  })
 
+  // Red team cannon minions
   const redCannonPositions: [number, number, number][] = [
     [halfSize - 28, 0, -halfSize + 38],
   ]
+  redCannonPositions.forEach((pos, i) => {
+    minions.push({
+      id: `red-cannon-${i}`,
+      type: 'cannon',
+      position: pos,
+      isBlue: false,
+      hp: MAX_HP,
+      isDead: false,
+    })
+  })
 
-  return (
-    <group>
-      {/* Blue team minions */}
-      {blueMeleePositions.map((pos, i) => (
-        <MeleeMinion key={`blue-melee-${i}`} position={pos} isBlue={true} />
-      ))}
-      {blueCasterPositions.map((pos, i) => (
-        <CasterMinion key={`blue-caster-${i}`} position={pos} isBlue={true} />
-      ))}
-      {blueCannonPositions.map((pos, i) => (
-        <CannonMinion key={`blue-cannon-${i}`} position={pos} isBlue={true} />
-      ))}
-
-      {/* Red team minions */}
-      {redMeleePositions.map((pos, i) => (
-        <MeleeMinion key={`red-melee-${i}`} position={pos} isBlue={false} />
-      ))}
-      {redCasterPositions.map((pos, i) => (
-        <CasterMinion key={`red-caster-${i}`} position={pos} isBlue={false} />
-      ))}
-      {redCannonPositions.map((pos, i) => (
-        <CannonMinion key={`red-cannon-${i}`} position={pos} isBlue={false} />
-      ))}
-    </group>
-  )
+  return minions
 }

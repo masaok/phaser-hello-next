@@ -3,7 +3,6 @@
 import { useRef } from 'react'
 import { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
-import { MapMinions } from './Minions'
 
 interface TerrainProps {
   mapSize: number
@@ -60,9 +59,6 @@ export default function Terrain({ mapSize, onGroundClick }: TerrainProps) {
 
       {/* Bushes */}
       <Bushes mapSize={mapSize} />
-
-      {/* Minions */}
-      <MapMinions mapSize={mapSize} />
     </group>
   )
 }
