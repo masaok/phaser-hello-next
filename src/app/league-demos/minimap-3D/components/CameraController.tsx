@@ -74,18 +74,22 @@ export default function CameraController({ championPosition, onViewportChange }:
 
       // Y key toggles camera lock on/off
       if (e.key.toLowerCase() === 'y') {
-        setIsFollowing(prev => !prev)
-        if (!isFollowing) {
+        if (isFollowing) {
+          // Switching to unlocked - center camera on Jinx first
           setCameraTarget([championPosition[0], 0, championPosition[2]])
+          setIsFollowing(false)
+        } else {
+          // Switching to locked
+          setIsFollowing(true)
         }
       }
 
       // Spacebar: in locked mode toggles to unlocked, in unlocked mode recenters on Jinx
       if (e.key === ' ') {
         if (isFollowing) {
-          // Currently locked - unlock
-          setIsFollowing(false)
+          // Currently locked - unlock and center camera on Jinx
           setCameraTarget([championPosition[0], 0, championPosition[2]])
+          setIsFollowing(false)
         } else {
           // Currently unlocked - recenter camera on Jinx (but stay unlocked)
           setCameraTarget([championPosition[0], 0, championPosition[2]])
