@@ -5,7 +5,8 @@ import { useFrame } from '@react-three/fiber'
 import { Billboard } from '@react-three/drei'
 import * as THREE from 'three'
 import JinxModel, { JinxLegs } from './JinxModel'
-import { getMapColliders, checkCollision, resolveCollision, Collider } from './CollisionSystem'
+import { getMapColliders } from './CollisionSystem'
+import { MinionData } from './Minions'
 
 interface Champion3DProps {
   position: [number, number, number]
@@ -17,6 +18,9 @@ interface Champion3DProps {
   health?: number
   maxHealth?: number
   mapSize?: number
+  isShooting?: boolean
+  targetedMinionId?: string | null
+  minions?: MinionData[]
 }
 
 const MOVE_SPEED = 30 // units per second
@@ -32,6 +36,9 @@ export default function Champion3D({
   health = 610,
   maxHealth = 610,
   mapSize = 200,
+  isShooting = false,
+  targetedMinionId = null,
+  minions = [],
 }: Champion3DProps) {
   const groupRef = useRef<THREE.Group>(null)
   const currentPosition = useRef<THREE.Vector3>(new THREE.Vector3(...position))
@@ -119,6 +126,18 @@ export default function Champion3D({
       animCycle.current *= 0.9
     }
 
+    // Face target minion when shooting
+    if (isShooting && targetedMinionId) {
+      const targetMinion = minions.find(m => m.id === targetedMinionId)
+      if (targetMinion && groupRef.current) {
+        const dx = targetMinion.position[0] - currentPosition.current.x
+        const dz = targetMinion.position[2] - currentPosition.current.z
+        const targetRotation = Math.atan2(dx, dz)
+        currentRotation.current = targetRotation
+        groupRef.current.rotation.y = currentRotation.current
+      }
+    }
+
     // Apply animations to body parts
     if (groupRef.current) {
       const leftLeg = groupRef.current.getObjectByName('leftLeg')
@@ -127,7 +146,31 @@ export default function Champion3D({
       const rightArm = groupRef.current.getObjectByName('rightArm')
       const body = groupRef.current.getObjectByName('body')
 
-      if (isMoving.current) {
+      if (isShooting) {
+        // SHOOTING STANCE - stable stance, arms raised for aiming
+        if (leftLeg && rightLeg) {
+          // Wide stable stance
+          leftLeg.rotation.x = -0.1
+          rightLeg.rotation.x = 0.2
+          leftLeg.rotation.z = -0.15
+          rightLeg.rotation.z = 0.15
+        }
+
+        if (leftArm && rightArm) {
+          // Arms raised and extended forward for aiming
+          rightArm.rotation.x = -0.8 // Gun arm raised
+          rightArm.rotation.z = 0.2
+          leftArm.rotation.x = -0.5 // Support arm
+          leftArm.rotation.z = -0.3
+        }
+
+        if (body) {
+          body.position.y = 1.4 // Slightly lower stance
+          body.rotation.x = 0.15 // Lean forward
+          body.rotation.z = 0
+          body.rotation.y = 0
+        }
+      } else if (isMoving.current) {
         // RUNNING ANIMATION
         const runCycle = animCycle.current
 
@@ -135,12 +178,16 @@ export default function Champion3D({
         if (leftLeg && rightLeg) {
           leftLeg.rotation.x = Math.sin(runCycle) * 0.7
           rightLeg.rotation.x = Math.sin(runCycle + Math.PI) * 0.7
+          leftLeg.rotation.z = 0
+          rightLeg.rotation.z = 0
         }
 
         // Arm swing - opposite to legs for natural running
         if (leftArm && rightArm) {
           leftArm.rotation.x = Math.sin(runCycle + Math.PI) * 0.5
           rightArm.rotation.x = Math.sin(runCycle) * 0.5
+          leftArm.rotation.z = 0.1
+          rightArm.rotation.z = -0.1
         }
 
         // Body animations while running
@@ -161,6 +208,8 @@ export default function Champion3D({
         if (leftLeg && rightLeg) {
           leftLeg.rotation.x = Math.sin(swayCycle) * 0.02
           rightLeg.rotation.x = Math.sin(swayCycle + Math.PI) * 0.02
+          leftLeg.rotation.z = 0
+          rightLeg.rotation.z = 0
         }
 
         // Arms have subtle idle movement

@@ -16,6 +16,16 @@ const MAP_SIZE = 200 // 3D units (scaled down from 3200)
 const ATTACK_RANGE = 15 // Distance at which Jinx can attack
 const ATTACK_COOLDOWN = 0.8 // Seconds between attacks
 const DAMAGE_PER_HIT = 10
+const BULLET_SPEED = 80 // Units per second
+
+// Auto-attack bullet type
+interface AutoAttackBullet {
+  id: string
+  position: [number, number, number]
+  targetPosition: [number, number, number]
+  targetMinionId: string
+  createdAt: number
+}
 
 // Inner component that uses useFrame for ability and attack updates
 function AbilityUpdater({
@@ -56,6 +66,11 @@ export default function Game3D() {
   const [targetedMinionId, setTargetedMinionId] = useState<string | null>(null)
   const attackCooldownRef = useRef(0)
   const championPosRef = useRef(championPosition)
+
+  // Shooting state
+  const [isShooting, setIsShooting] = useState(false)
+  const [autoAttackBullets, setAutoAttackBullets] = useState<AutoAttackBullet[]>([])
+  const [hitMinionId, setHitMinionId] = useState<string | null>(null)
 
   // Create ability handlers
   const {
@@ -103,6 +118,58 @@ export default function Game3D() {
       attackCooldownRef.current -= delta
     }
 
+    // Update bullets
+    setAutoAttackBullets(prev => {
+      const updated: AutoAttackBullet[] = []
+      for (const bullet of prev) {
+        // Calculate direction to target
+        const dx = bullet.targetPosition[0] - bullet.position[0]
+        const dz = bullet.targetPosition[2] - bullet.position[2]
+        const distance = Math.sqrt(dx * dx + dz * dz)
+
+        if (distance < 2) {
+          // Bullet hit - trigger hit effect and damage
+          setHitMinionId(bullet.targetMinionId)
+          setTimeout(() => setHitMinionId(null), 150) // Clear hit effect after 150ms
+
+          // Deal damage
+          setMinions(currentMinions => currentMinions.map(m => {
+            if (m.id === bullet.targetMinionId) {
+              const newHp = m.hp - DAMAGE_PER_HIT
+              if (newHp <= 0) {
+                setTimeout(() => {
+                  setMinions(current => current.map(minion =>
+                    minion.id === bullet.targetMinionId
+                      ? { ...minion, isDead: true }
+                      : minion
+                  ))
+                  if (targetedMinionId === bullet.targetMinionId) {
+                    setTargetedMinionId(null)
+                  }
+                }, 500)
+              }
+              return { ...m, hp: newHp }
+            }
+            return m
+          }))
+        } else {
+          // Move bullet toward target
+          const speed = BULLET_SPEED * delta
+          const dirX = dx / distance
+          const dirZ = dz / distance
+          updated.push({
+            ...bullet,
+            position: [
+              bullet.position[0] + dirX * speed,
+              bullet.position[1],
+              bullet.position[2] + dirZ * speed,
+            ],
+          })
+        }
+      }
+      return updated
+    })
+
     // If we have a targeted minion, check if we can attack
     if (targetedMinionId) {
       const targetMinion = minions.find(m => m.id === targetedMinionId)
@@ -110,6 +177,7 @@ export default function Game3D() {
       if (!targetMinion || targetMinion.isDead || targetMinion.hp <= 0) {
         // Target is dead or doesn't exist, clear targeting
         setTargetedMinionId(null)
+        setIsShooting(false)
         return
       }
 
@@ -123,25 +191,19 @@ export default function Game3D() {
         // Reset cooldown
         attackCooldownRef.current = ATTACK_COOLDOWN
 
-        // Deal damage to the minion
-        setMinions(prev => prev.map(m => {
-          if (m.id === targetedMinionId) {
-            const newHp = m.hp - DAMAGE_PER_HIT
-            if (newHp <= 0) {
-              // Minion dies - mark as dead after short delay for animation
-              setTimeout(() => {
-                setMinions(current => current.map(minion =>
-                  minion.id === targetedMinionId
-                    ? { ...minion, isDead: true }
-                    : minion
-                ))
-                setTargetedMinionId(null)
-              }, 500) // Wait for death animation
-            }
-            return { ...m, hp: newHp }
-          }
-          return m
-        }))
+        // Set shooting state
+        setIsShooting(true)
+        setTimeout(() => setIsShooting(false), 200) // Shooting stance lasts 200ms
+
+        // Create bullet from Jinx's gun position
+        const bullet: AutoAttackBullet = {
+          id: `bullet-${Date.now()}`,
+          position: [championPosRef.current[0], 2, championPosRef.current[2]],
+          targetPosition: targetMinion.position,
+          targetMinionId: targetMinion.id,
+          createdAt: Date.now(),
+        }
+        setAutoAttackBullets(prev => [...prev, bullet])
 
         // Stop walking when attacking
         if (distance <= ATTACK_RANGE) {
@@ -150,7 +212,10 @@ export default function Game3D() {
       } else if (distance > ATTACK_RANGE) {
         // Walk toward minion if out of range
         setTargetPosition(targetMinion.position)
+        setIsShooting(false)
       }
+    } else {
+      setIsShooting(false)
     }
   }, [targetedMinionId, minions])
 
@@ -221,12 +286,16 @@ export default function Game3D() {
           health={abilityState.health}
           maxHealth={abilityState.maxHealth}
           mapSize={MAP_SIZE}
+          isShooting={isShooting}
+          targetedMinionId={targetedMinionId}
+          minions={minions}
         />
         <Projectiles projectiles={projectiles} chompers={chompers} />
         <MapMinions
           mapSize={MAP_SIZE}
           minions={minions}
           onMinionClick={handleMinionClick}
+          hitMinionId={hitMinionId}
         />
         {targetPosition && (
           <mesh position={targetPosition} rotation={[-Math.PI / 2, 0, 0]}>
@@ -234,19 +303,14 @@ export default function Game3D() {
             <meshBasicMaterial color="#00ff00" transparent opacity={0.7} />
           </mesh>
         )}
-        {/* Target indicator for targeted minion */}
-        {targetedMinionId && (() => {
-          const targetMinion = minions.find(m => m.id === targetedMinionId)
-          if (targetMinion && !targetMinion.isDead) {
-            return (
-              <mesh position={targetMinion.position} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[3, 3.5, 32]} />
-                <meshBasicMaterial color="#ff0000" transparent opacity={0.8} />
-              </mesh>
-            )
-          }
-          return null
-        })()}
+        {/* Auto-attack bullets */}
+        {autoAttackBullets.map(bullet => (
+          <mesh key={bullet.id} position={bullet.position}>
+            <sphereGeometry args={[0.3, 8, 8]} />
+            <meshStandardMaterial color="#ffdd00" emissive="#ffaa00" emissiveIntensity={2} />
+            <pointLight color="#ffaa00" intensity={5} distance={5} />
+          </mesh>
+        ))}
         <AbilityUpdater
           updateCooldowns={updateCooldowns}
           updateProjectiles={updateProjectiles}

@@ -16,6 +16,7 @@ interface MinionProps {
   onMinionClick?: (id: string, position: [number, number, number]) => void
   hp?: number
   onTakeDamage?: (id: string, newHp: number) => void
+  isHit?: boolean
 }
 
 // HP Bar component for minions
@@ -47,7 +48,7 @@ function MinionHPBar({ hp, maxHp, isBlue }: { hp: number; maxHp: number; isBlue:
 // ============================================
 // MELEE MINION - Red/Blue hooded warrior with axe and shield
 // ============================================
-export function MeleeMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP }: MinionProps) {
+export function MeleeMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP, isHit = false }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
@@ -153,6 +154,15 @@ export function MeleeMinion({ position, isBlue, rotation = 0, id, onMinionClick,
     <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]} onClick={handleClick}>
       {/* HP Bar */}
       {!isDying && <MinionHPBar hp={hp} maxHp={MAX_HP} isBlue={isBlue} />}
+
+      {/* Hit glow effect */}
+      {isHit && (
+        <mesh position={[0, 0.7, 0]}>
+          <sphereGeometry args={[1.2, 16, 16]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
+          <pointLight color="#ffffff" intensity={10} distance={8} />
+        </mesh>
+      )}
 
       {/* Hood main body */}
       <mesh position={[0, 0.9, 0]} castShadow>
@@ -291,7 +301,7 @@ export function MeleeMinion({ position, isBlue, rotation = 0, id, onMinionClick,
 // ============================================
 // CASTER MINION - Blue/Red robed mage with crystal staff
 // ============================================
-export function CasterMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP }: MinionProps) {
+export function CasterMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP, isHit = false }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const crystalRef = useRef<THREE.Mesh>(null)
@@ -397,6 +407,15 @@ export function CasterMinion({ position, isBlue, rotation = 0, id, onMinionClick
     <group ref={groupRef} position={position} scale={[2.4, 2.4, 2.4]} onClick={handleClick}>
       {/* HP Bar */}
       {!isDying && <MinionHPBar hp={hp} maxHp={MAX_HP} isBlue={isBlue} />}
+
+      {/* Hit glow effect */}
+      {isHit && (
+        <mesh position={[0, 0.7, 0]}>
+          <sphereGeometry args={[1.2, 16, 16]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
+          <pointLight color="#ffffff" intensity={10} distance={8} />
+        </mesh>
+      )}
 
       {/* Hood main */}
       <mesh position={[0, 0.95, 0]} castShadow>
@@ -521,7 +540,7 @@ export function CasterMinion({ position, isBlue, rotation = 0, id, onMinionClick
 // ============================================
 // CANNON MINION - Rides in wheeled cannon cart
 // ============================================
-export function CannonMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP }: MinionProps) {
+export function CannonMinion({ position, isBlue, rotation = 0, id, onMinionClick, hp = MAX_HP, isHit = false }: MinionProps) {
   const groupRef = useRef<THREE.Group>(null)
   const animTime = useRef(Math.random() * Math.PI * 2)
   const currentRotation = useRef(rotation || Math.random() * Math.PI * 2)
@@ -622,6 +641,15 @@ export function CannonMinion({ position, isBlue, rotation = 0, id, onMinionClick
       {/* HP Bar */}
       {!isDying && <MinionHPBar hp={hp} maxHp={MAX_HP} isBlue={isBlue} />}
 
+      {/* Hit glow effect */}
+      {isHit && (
+        <mesh position={[0, 0.6, 0]}>
+          <sphereGeometry args={[1.4, 16, 16]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
+          <pointLight color="#ffffff" intensity={10} distance={8} />
+        </mesh>
+      )}
+
       {/* Cart body */}
       <mesh position={[0, 0.35, 0]} castShadow>
         <boxGeometry args={[0.8, 0.3, 0.6]} />
@@ -721,13 +749,15 @@ interface MinionsProps {
   mapSize: number
   minions: MinionData[]
   onMinionClick: (id: string, position: [number, number, number]) => void
+  hitMinionId?: string | null
 }
 
-export function MapMinions({ minions, onMinionClick }: MinionsProps) {
+export function MapMinions({ minions, onMinionClick, hitMinionId }: MinionsProps) {
   return (
     <group>
       {minions.map((minion) => {
         if (minion.isDead) return null
+        const isHit = hitMinionId === minion.id
 
         switch (minion.type) {
           case 'melee':
@@ -739,6 +769,7 @@ export function MapMinions({ minions, onMinionClick }: MinionsProps) {
                 isBlue={minion.isBlue}
                 hp={minion.hp}
                 onMinionClick={onMinionClick}
+                isHit={isHit}
               />
             )
           case 'caster':
@@ -750,6 +781,7 @@ export function MapMinions({ minions, onMinionClick }: MinionsProps) {
                 isBlue={minion.isBlue}
                 hp={minion.hp}
                 onMinionClick={onMinionClick}
+                isHit={isHit}
               />
             )
           case 'cannon':
@@ -761,6 +793,7 @@ export function MapMinions({ minions, onMinionClick }: MinionsProps) {
                 isBlue={minion.isBlue}
                 hp={minion.hp}
                 onMinionClick={onMinionClick}
+                isHit={isHit}
               />
             )
         }
