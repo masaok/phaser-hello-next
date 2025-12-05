@@ -5,8 +5,14 @@ import Link from 'next/link'
 const demos = [
   {
     id: 'minimap',
-    title: 'Minimap Demo',
-    description: 'Champion walking around a large map with a minimap in the bottom-right corner.',
+    title: 'Minimap Demo (2D)',
+    description: 'Champion walking around a large 2D map with a minimap in the bottom-right corner.',
+    status: 'ready',
+  },
+  {
+    id: 'minimap-3D',
+    title: 'Minimap Demo (3D)',
+    description: '3D isometric view with Three.js. Click to move, scroll to zoom, WASD to pan camera.',
     status: 'ready',
   },
   {
