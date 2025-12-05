@@ -6,6 +6,8 @@ import * as THREE from 'three'
 
 interface CameraControllerProps {
   championPosition: [number, number, number]
+  externalCameraTarget?: [number, number] | null
+  onExternalTargetConsumed?: () => void
 }
 
 // LoL-style camera angle (56 degrees from horizontal)
@@ -17,7 +19,12 @@ const PAN_SPEED = 0.5
 const EDGE_PAN_ZONE = 50 // pixels from screen edge
 const EDGE_PAN_SPEED = 500 // 500% faster edge panning
 
-export default function CameraController({ championPosition, onViewportChange }: CameraControllerProps & { onViewportChange?: (viewport: { x: number; z: number; width: number; height: number }) => void }) {
+export default function CameraController({
+  championPosition,
+  onViewportChange,
+  externalCameraTarget,
+  onExternalTargetConsumed,
+}: CameraControllerProps & { onViewportChange?: (viewport: { x: number; z: number; width: number; height: number }) => void }) {
   const { camera, gl } = useThree()
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [cameraTarget, setCameraTarget] = useState<[number, number, number]>([0, 0, 0])
@@ -51,6 +58,16 @@ export default function CameraController({ championPosition, onViewportChange }:
       })
     }
   }, [camera, gl, zoom, championPosition, cameraTarget, isFollowing, onViewportChange])
+
+  // Handle external camera target (from minimap click/drag)
+  useEffect(() => {
+    if (externalCameraTarget) {
+      // Unlock camera and move to target
+      setIsFollowing(false)
+      setCameraTarget([externalCameraTarget[0], 0, externalCameraTarget[1]])
+      onExternalTargetConsumed?.()
+    }
+  }, [externalCameraTarget, onExternalTargetConsumed])
 
   // Mouse wheel zoom
   useEffect(() => {

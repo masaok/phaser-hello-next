@@ -72,6 +72,9 @@ export default function Game3D() {
   const [autoAttackBullets, setAutoAttackBullets] = useState<AutoAttackBullet[]>([])
   const [hitMinionId, setHitMinionId] = useState<string | null>(null)
 
+  // External camera target (from minimap click/drag)
+  const [externalCameraTarget, setExternalCameraTarget] = useState<[number, number] | null>(null)
+
   // Create ability handlers
   const {
     stateRef,
@@ -261,6 +264,11 @@ export default function Game3D() {
     setChampionRotation(rotation)
   }, [])
 
+  // Handle minimap click/drag - move camera to that location
+  const handleMinimapClick = useCallback((worldX: number, worldZ: number) => {
+    setExternalCameraTarget([worldX, worldZ])
+  }, [])
+
   return (
     <div className="w-full h-full relative">
       <Canvas
@@ -274,7 +282,12 @@ export default function Game3D() {
         style={{ background: '#1a2a3a' }}
       >
         <Lighting />
-        <CameraController championPosition={championPosition} onViewportChange={setViewport} />
+        <CameraController
+          championPosition={championPosition}
+          onViewportChange={setViewport}
+          externalCameraTarget={externalCameraTarget}
+          onExternalTargetConsumed={() => setExternalCameraTarget(null)}
+        />
         <Terrain mapSize={MAP_SIZE} onGroundClick={handleGroundClick} />
         <Champion3D
           position={championPosition}
@@ -322,6 +335,7 @@ export default function Game3D() {
         championPosition={championPosition}
         mapSize={MAP_SIZE}
         viewport={viewport}
+        onMinimapClick={handleMinimapClick}
       />
       <AbilityBar abilityState={abilityState} />
     </div>

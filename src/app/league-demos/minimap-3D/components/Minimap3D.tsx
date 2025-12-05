@@ -1,16 +1,21 @@
 'use client'
 
+import { useRef, useCallback } from 'react'
+
 interface Minimap3DProps {
   championPosition: [number, number, number]
   mapSize: number
   viewport?: { x: number; z: number; width: number; height: number }
+  onMinimapClick?: (worldX: number, worldZ: number) => void
 }
 
 const MINIMAP_SIZE = 200
 const MINIMAP_MARGIN = 16
 
-export default function Minimap3D({ championPosition, mapSize, viewport }: Minimap3DProps) {
+export default function Minimap3D({ championPosition, mapSize, viewport, onMinimapClick }: Minimap3DProps) {
   const halfMap = mapSize / 2
+  const minimapRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
 
   // Convert 3D world position to minimap position
   // World: x goes left to right, z goes top to bottom (in 3D space)
@@ -29,19 +34,76 @@ export default function Minimap3D({ championPosition, mapSize, viewport }: Minim
     height: (viewport.height / mapSize) * MINIMAP_SIZE,
   } : null
 
+  // Convert minimap coordinates to world coordinates
+  const minimapToWorld = useCallback((clientX: number, clientY: number) => {
+    if (!minimapRef.current) return null
+    const rect = minimapRef.current.getBoundingClientRect()
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+
+    // Clamp to minimap bounds
+    const clampedX = Math.max(0, Math.min(MINIMAP_SIZE, x))
+    const clampedY = Math.max(0, Math.min(MINIMAP_SIZE, y))
+
+    // Convert to world coordinates
+    const worldX = (clampedX / MINIMAP_SIZE) * mapSize - halfMap
+    const worldZ = (clampedY / MINIMAP_SIZE) * mapSize - halfMap
+
+    return { worldX, worldZ }
+  }, [mapSize, halfMap])
+
+  // Handle click on minimap
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!onMinimapClick) return
+    const coords = minimapToWorld(e.clientX, e.clientY)
+    if (coords) {
+      onMinimapClick(coords.worldX, coords.worldZ)
+    }
+  }, [onMinimapClick, minimapToWorld])
+
+  // Handle mouse down for dragging
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true
+    handleClick(e)
+  }, [handleClick])
+
+  // Handle mouse move while dragging
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging.current || !onMinimapClick) return
+    const coords = minimapToWorld(e.clientX, e.clientY)
+    if (coords) {
+      onMinimapClick(coords.worldX, coords.worldZ)
+    }
+  }, [onMinimapClick, minimapToWorld])
+
+  // Handle mouse up to stop dragging
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false
+  }, [])
+
+  // Handle mouse leave to stop dragging
+  const handleMouseLeave = useCallback(() => {
+    isDragging.current = false
+  }, [])
+
   return (
     <div
-      className="absolute pointer-events-none"
+      ref={minimapRef}
+      className="absolute cursor-pointer"
       style={{
         right: MINIMAP_MARGIN,
         bottom: MINIMAP_MARGIN,
         width: MINIMAP_SIZE,
         height: MINIMAP_SIZE,
       }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Minimap background */}
       <div
-        className="absolute inset-0 rounded"
+        className="absolute inset-0 rounded pointer-events-none"
         style={{
           background: 'linear-gradient(135deg, #3a5a4a 0%, #5a7a6a 50%, #4a6a5a 100%)',
           border: '2px solid #c9aa71',
