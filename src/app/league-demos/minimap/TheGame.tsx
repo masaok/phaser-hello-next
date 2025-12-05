@@ -14,8 +14,8 @@ export default function TheGame() {
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 1024,
-      height: 768,
+      width: window.innerWidth,
+      height: window.innerHeight,
       parent: containerRef.current,
       backgroundColor: '#1a1a2e',
       physics: {
@@ -26,6 +26,10 @@ export default function TheGame() {
         },
       },
       scene: [BootScene, GameScene],
+      scale: {
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+      },
     }
 
     gameRef.current = new Phaser.Game(config)
@@ -41,7 +45,7 @@ export default function TheGame() {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full flex items-center justify-center"
+      className="w-screen h-screen"
     />
   )
 }

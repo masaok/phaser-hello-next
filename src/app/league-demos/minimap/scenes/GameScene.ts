@@ -11,6 +11,11 @@ export default class GameScene extends Phaser.Scene {
   minimapCamera!: Phaser.Cameras.Scene2D.Camera
   championMarker!: Phaser.GameObjects.Sprite
 
+  // UI elements that need repositioning on resize
+  minimapBg!: Phaser.GameObjects.Image
+  minimapBorder!: Phaser.GameObjects.Graphics
+  minimapLabel!: Phaser.GameObjects.Text
+
   // Movement
   targetX: number = 0
   targetY: number = 0
@@ -26,12 +31,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // Create the large map
+    // Create the Summoner's Rift style map
     this.createMap()
 
-    // Create champion in center of map
-    const startX = MAP_WIDTH / 2
-    const startY = MAP_HEIGHT / 2
+    // Create champion at blue side fountain (bottom-left)
+    const startX = 250
+    const startY = MAP_HEIGHT - 250
     this.champion = this.physics.add.sprite(startX, startY, 'champion-idle')
     this.champion.setScale(1.5)
     this.champion.setDepth(10)
@@ -49,7 +54,6 @@ export default class GameScene extends Phaser.Scene {
 
     // Input - left click or right click to move
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Convert screen coordinates to world coordinates
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
       this.moveTo(worldPoint.x, worldPoint.y)
       this.createClickIndicator(worldPoint.x, worldPoint.y)
@@ -59,47 +63,83 @@ export default class GameScene extends Phaser.Scene {
     this.game.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault()
     })
+
+    // Handle resize
+    this.scale.on('resize', this.handleResize, this)
+  }
+
+  handleResize(gameSize: Phaser.Structs.Size) {
+    const width = gameSize.width
+    const height = gameSize.height
+
+    // Update minimap position
+    if (this.minimapCamera) {
+      this.minimapCamera.setPosition(
+        width - MINIMAP_SIZE - MINIMAP_MARGIN,
+        height - MINIMAP_SIZE - MINIMAP_MARGIN
+      )
+    }
+
+    if (this.minimapBg) {
+      this.minimapBg.setPosition(
+        width - MINIMAP_SIZE / 2 - MINIMAP_MARGIN,
+        height - MINIMAP_SIZE / 2 - MINIMAP_MARGIN
+      )
+    }
+
+    if (this.minimapBorder) {
+      this.minimapBorder.clear()
+      this.minimapBorder.lineStyle(2, 0xc9aa71, 1)
+      this.minimapBorder.strokeRect(
+        width - MINIMAP_SIZE - MINIMAP_MARGIN,
+        height - MINIMAP_SIZE - MINIMAP_MARGIN,
+        MINIMAP_SIZE,
+        MINIMAP_SIZE
+      )
+    }
+
+    if (this.minimapLabel) {
+      this.minimapLabel.setPosition(
+        width - MINIMAP_SIZE / 2 - MINIMAP_MARGIN,
+        height - MINIMAP_SIZE - MINIMAP_MARGIN - 18
+      )
+    }
   }
 
   createMap() {
-    // Create ground layer with grass
     const tilesX = Math.ceil(MAP_WIDTH / TILE_SIZE)
     const tilesY = Math.ceil(MAP_HEIGHT / TILE_SIZE)
 
+    // Create base terrain
     for (let y = 0; y < tilesY; y++) {
       for (let x = 0; x < tilesX; x++) {
         const tileX = x * TILE_SIZE + TILE_SIZE / 2
         const tileY = y * TILE_SIZE + TILE_SIZE / 2
 
-        // Default grass
-        let texture = 'grass'
+        let texture = 'void' // Default dark background
 
-        // Create river through middle
-        if (Math.abs(x - tilesX / 2) < 2 && y > 5 && y < tilesY - 5) {
-          texture = 'water'
-        }
+        // Check if within playable diamond shape
+        if (this.isInPlayableArea(x, y, tilesX, tilesY)) {
+          texture = 'jungle' // Olive/tan jungle
 
-        // Create lanes (paths)
-        // Top lane
-        if (y < 5 && (x < 8 || x > tilesX - 8)) {
-          texture = 'lane'
-        }
-        // Bottom lane
-        if (y > tilesY - 6 && (x < 8 || x > tilesX - 8)) {
-          texture = 'lane'
-        }
-        // Side lanes connecting
-        if ((x < 5 || x > tilesX - 6) && y >= 5 && y <= tilesY - 6) {
-          texture = 'lane'
-        }
-        // Mid lane (diagonal-ish)
-        const midStart = 8
-        const midEnd = tilesX - 8
-        if (x >= midStart && x <= midEnd) {
-          const progress = (x - midStart) / (midEnd - midStart)
-          const expectedY = 8 + progress * (tilesY - 16)
-          if (Math.abs(y - expectedY) < 2) {
+          // River - diagonal from top-left to bottom-right
+          if (this.isRiver(x, y, tilesX, tilesY)) {
+            texture = 'water'
+          }
+
+          // Lanes
+          if (this.isLane(x, y, tilesX, tilesY)) {
             texture = 'lane'
+          }
+
+          // Blue base area (bottom-left corner)
+          if (this.isBlueBase(x, y, tilesX, tilesY)) {
+            texture = 'base-blue'
+          }
+
+          // Red base area (top-right corner)
+          if (this.isRedBase(x, y, tilesX, tilesY)) {
+            texture = 'base-red'
           }
         }
 
@@ -107,74 +147,208 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Add bases
-    const blueBase = this.add.image(128, MAP_HEIGHT - 128, 'base')
-    blueBase.setTint(0x4444ff)
-    blueBase.setDepth(1)
+    // Add structures
+    this.createStructures()
 
-    const redBase = this.add.image(MAP_WIDTH - 128, 128, 'base')
-    redBase.setTint(0xff4444)
-    redBase.setDepth(1)
+    // Add objectives (dragon/baron pits)
+    this.createObjectives()
+  }
 
-    // Add towers along lanes
-    const towerPositions = [
-      // Blue side towers
-      { x: 300, y: MAP_HEIGHT - 200, color: 0x4444ff },
-      { x: 200, y: MAP_HEIGHT - 400, color: 0x4444ff },
-      { x: 400, y: MAP_HEIGHT - 150, color: 0x4444ff },
-      // Red side towers
-      { x: MAP_WIDTH - 300, y: 200, color: 0xff4444 },
-      { x: MAP_WIDTH - 200, y: 400, color: 0xff4444 },
-      { x: MAP_WIDTH - 400, y: 150, color: 0xff4444 },
-      // Mid towers
-      { x: 1000, y: 2200, color: 0x4444ff },
-      { x: 2200, y: 1000, color: 0xff4444 },
+  isInPlayableArea(x: number, y: number, tilesX: number, tilesY: number): boolean {
+    // Create a rounded square/diamond shape for the playable area
+    const centerX = tilesX / 2
+    const centerY = tilesY / 2
+    const margin = 4
+
+    // Distance from edges
+    const fromLeft = x
+    const fromRight = tilesX - x - 1
+    const fromTop = y
+    const fromBottom = tilesY - y - 1
+
+    // Cut corners to create the shape
+    const cornerCut = 8
+
+    // Top-left corner (near red base approach)
+    if (fromLeft + fromTop < cornerCut) return false
+    // Top-right corner
+    if (fromRight + fromTop < cornerCut - 2) return false
+    // Bottom-left corner
+    if (fromLeft + fromBottom < cornerCut - 2) return false
+    // Bottom-right corner (near blue base approach)
+    if (fromRight + fromBottom < cornerCut) return false
+
+    // Basic bounds
+    if (x < margin || x > tilesX - margin - 1) return false
+    if (y < margin || y > tilesY - margin - 1) return false
+
+    return true
+  }
+
+  isRiver(x: number, y: number, tilesX: number, tilesY: number): boolean {
+    // River runs diagonally from top-left area to bottom-right area
+    // In the reference, it goes from around (0.2, 0.4) to (0.6, 0.8) of the map
+
+    const normalizedX = x / tilesX
+    const normalizedY = y / tilesY
+
+    // The river follows a diagonal line
+    // y = x shifted and constrained to middle area
+    const riverCenterY = normalizedX + 0.15
+    const distFromRiver = Math.abs(normalizedY - riverCenterY)
+
+    // River width varies - wider in the middle
+    const riverWidth = 0.06
+
+    // Only in the middle section of the map (not near bases)
+    const inMiddle = normalizedX > 0.2 && normalizedX < 0.8 &&
+                     normalizedY > 0.2 && normalizedY < 0.8
+
+    return distFromRiver < riverWidth && inMiddle
+  }
+
+  isLane(x: number, y: number, tilesX: number, tilesY: number): boolean {
+    const laneWidth = 4
+    const margin = 6
+
+    // Top lane - runs along top edge, then down the left side
+    // Horizontal part along top
+    const topLaneHorizontal = y >= margin && y < margin + laneWidth && x > margin + 6
+    // Vertical part along left
+    const topLaneVertical = x >= margin && x < margin + laneWidth && y < tilesY - margin - 6
+
+    // Bottom lane - runs along right side, then along bottom
+    // Vertical part along right
+    const botLaneVertical = x >= tilesX - margin - laneWidth && x < tilesX - margin && y > margin + 6
+    // Horizontal part along bottom
+    const botLaneHorizontal = y >= tilesY - margin - laneWidth && y < tilesY - margin && x < tilesX - margin - 6
+
+    // Mid lane - diagonal from bottom-left to top-right
+    const normalizedX = x / tilesX
+    const normalizedY = y / tilesY
+    const midLaneY = 1.0 - normalizedX // Diagonal line
+    const distFromMid = Math.abs(normalizedY - midLaneY)
+    const midLane = distFromMid < 0.05 && normalizedX > 0.15 && normalizedX < 0.85
+
+    return topLaneHorizontal || topLaneVertical || botLaneHorizontal || botLaneVertical || midLane
+  }
+
+  isBlueBase(x: number, y: number, tilesX: number, tilesY: number): boolean {
+    // Bottom-left corner
+    const baseSize = 8
+    return x < baseSize + 4 && y > tilesY - baseSize - 4
+  }
+
+  isRedBase(x: number, y: number, tilesX: number, tilesY: number): boolean {
+    // Top-right corner
+    const baseSize = 8
+    return x > tilesX - baseSize - 4 && y < baseSize + 4
+  }
+
+  createStructures() {
+    // Blue Nexus (bottom-left)
+    this.add.image(200, MAP_HEIGHT - 200, 'nexus-blue').setDepth(2)
+
+    // Red Nexus (top-right)
+    this.add.image(MAP_WIDTH - 200, 200, 'nexus-red').setDepth(2)
+
+    // Blue towers
+    const blueTowers = [
+      // Nexus towers
+      { x: 320, y: MAP_HEIGHT - 280 },
+      { x: 280, y: MAP_HEIGHT - 320 },
+      // Top lane (left side going up)
+      { x: 280, y: MAP_HEIGHT - 550 },
+      { x: 280, y: MAP_HEIGHT - 900 },
+      { x: 280, y: MAP_HEIGHT - 1300 },
+      // Mid lane
+      { x: 550, y: MAP_HEIGHT - 550 },
+      { x: 900, y: MAP_HEIGHT - 900 },
+      { x: 1250, y: MAP_HEIGHT - 1250 },
+      // Bot lane (bottom going right)
+      { x: 550, y: MAP_HEIGHT - 280 },
+      { x: 900, y: MAP_HEIGHT - 280 },
+      { x: 1300, y: MAP_HEIGHT - 280 },
     ]
 
-    towerPositions.forEach(pos => {
-      const tower = this.add.image(pos.x, pos.y, 'tower')
-      tower.setTint(pos.color)
-      tower.setDepth(2)
+    blueTowers.forEach(pos => {
+      this.add.image(pos.x, pos.y, 'tower-blue').setDepth(3)
     })
 
-    // Add trees scattered around
-    const treePositions = [
-      { x: 500, y: 500 }, { x: 600, y: 700 }, { x: 800, y: 400 },
-      { x: 2600, y: 500 }, { x: 2700, y: 700 }, { x: 2400, y: 400 },
-      { x: 500, y: 2700 }, { x: 700, y: 2600 }, { x: 400, y: 2500 },
-      { x: 2600, y: 2700 }, { x: 2700, y: 2500 }, { x: 2800, y: 2600 },
-      // Jungle areas
-      { x: 900, y: 1200 }, { x: 1000, y: 1400 }, { x: 1100, y: 1100 },
-      { x: 2100, y: 1800 }, { x: 2200, y: 2000 }, { x: 2300, y: 1900 },
-      { x: 1200, y: 2100 }, { x: 1400, y: 2200 }, { x: 1100, y: 2300 },
-      { x: 1800, y: 900 }, { x: 2000, y: 1000 }, { x: 1900, y: 1100 },
+    // Red towers
+    const redTowers = [
+      // Nexus towers
+      { x: MAP_WIDTH - 320, y: 280 },
+      { x: MAP_WIDTH - 280, y: 320 },
+      // Top lane (top going left)
+      { x: MAP_WIDTH - 550, y: 280 },
+      { x: MAP_WIDTH - 900, y: 280 },
+      { x: MAP_WIDTH - 1300, y: 280 },
+      // Mid lane
+      { x: MAP_WIDTH - 550, y: 550 },
+      { x: MAP_WIDTH - 900, y: 900 },
+      { x: MAP_WIDTH - 1250, y: 1250 },
+      // Bot lane (right side going down)
+      { x: MAP_WIDTH - 280, y: 550 },
+      { x: MAP_WIDTH - 280, y: 900 },
+      { x: MAP_WIDTH - 280, y: 1300 },
     ]
 
-    treePositions.forEach(pos => {
-      const tree = this.add.image(pos.x, pos.y, 'tree')
-      tree.setDepth(3)
+    redTowers.forEach(pos => {
+      this.add.image(pos.x, pos.y, 'tower-red').setDepth(3)
     })
 
-    // Add rocks near river
-    for (let i = 0; i < 8; i++) {
-      const rockY = 400 + i * 300
-      this.add.image(MAP_WIDTH / 2 - 100, rockY, 'rock').setDepth(2)
-      this.add.image(MAP_WIDTH / 2 + 100, rockY + 50, 'rock').setDepth(2)
-    }
+    // Blue inhibitors
+    const blueInhibitors = [
+      { x: 380, y: MAP_HEIGHT - 420 }, // Top
+      { x: 450, y: MAP_HEIGHT - 450 }, // Mid
+      { x: 420, y: MAP_HEIGHT - 380 }, // Bot
+    ]
+
+    blueInhibitors.forEach(pos => {
+      this.add.image(pos.x, pos.y, 'inhibitor-blue').setDepth(3)
+    })
+
+    // Red inhibitors
+    const redInhibitors = [
+      { x: MAP_WIDTH - 420, y: 380 }, // Top
+      { x: MAP_WIDTH - 450, y: 450 }, // Mid
+      { x: MAP_WIDTH - 380, y: 420 }, // Bot
+    ]
+
+    redInhibitors.forEach(pos => {
+      this.add.image(pos.x, pos.y, 'inhibitor-red').setDepth(3)
+    })
+  }
+
+  createObjectives() {
+    // Dragon pit - on the river, bottom-left side of center
+    // In the reference, it's around (0.35, 0.55) of the map
+    const dragonX = MAP_WIDTH * 0.35
+    const dragonY = MAP_HEIGHT * 0.55
+    this.add.image(dragonX, dragonY, 'pit').setDepth(1)
+    this.add.image(dragonX, dragonY, 'dragon').setDepth(2)
+
+    // Baron pit - on the river, top-right side of center
+    // In the reference, it's around (0.65, 0.45) of the map
+    const baronX = MAP_WIDTH * 0.65
+    const baronY = MAP_HEIGHT * 0.45
+    this.add.image(baronX, baronY, 'pit').setDepth(1)
+    this.add.image(baronX, baronY, 'baron').setDepth(2)
   }
 
   createMinimap() {
-    const gameWidth = Number(this.game.config.width)
-    const gameHeight = Number(this.game.config.height)
+    const gameWidth = this.scale.width
+    const gameHeight = this.scale.height
 
     // Add minimap background (fixed to camera)
-    const minimapBg = this.add.image(
+    this.minimapBg = this.add.image(
       gameWidth - MINIMAP_SIZE / 2 - MINIMAP_MARGIN,
       gameHeight - MINIMAP_SIZE / 2 - MINIMAP_MARGIN,
       'minimap-bg'
     )
-    minimapBg.setScrollFactor(0)
-    minimapBg.setDepth(100)
+    this.minimapBg.setScrollFactor(0)
+    this.minimapBg.setDepth(100)
 
     // Create minimap camera
     this.minimapCamera = this.cameras.add(
@@ -188,10 +362,10 @@ export default class GameScene extends Phaser.Scene {
     this.minimapCamera.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
     this.minimapCamera.setZoom(MINIMAP_SIZE / MAP_WIDTH)
     this.minimapCamera.setScroll(0, 0)
-    this.minimapCamera.setBackgroundColor(0x1a1a2e)
+    this.minimapCamera.setBackgroundColor(0x1a2a3a)
 
     // Ignore the minimap background in the minimap camera
-    this.minimapCamera.ignore(minimapBg)
+    this.minimapCamera.ignore(this.minimapBg)
 
     // Add champion marker that's visible on minimap
     this.championMarker = this.add.sprite(
@@ -200,40 +374,39 @@ export default class GameScene extends Phaser.Scene {
       'champion-marker'
     )
     this.championMarker.setDepth(50)
-    this.championMarker.setScale(8) // Scale up so it's visible on minimap
+    this.championMarker.setScale(8)
 
-    // Hide marker from main camera (it would be too big)
+    // Hide marker from main camera
     this.cameras.main.ignore(this.championMarker)
 
     // Add border frame (fixed to camera)
-    const borderGraphics = this.add.graphics()
-    borderGraphics.lineStyle(3, 0x6a6aaa, 1)
-    borderGraphics.strokeRect(
+    this.minimapBorder = this.add.graphics()
+    this.minimapBorder.lineStyle(2, 0xc9aa71, 1)
+    this.minimapBorder.strokeRect(
       gameWidth - MINIMAP_SIZE - MINIMAP_MARGIN,
       gameHeight - MINIMAP_SIZE - MINIMAP_MARGIN,
       MINIMAP_SIZE,
       MINIMAP_SIZE
     )
-    borderGraphics.setScrollFactor(0)
-    borderGraphics.setDepth(101)
+    this.minimapBorder.setScrollFactor(0)
+    this.minimapBorder.setDepth(101)
 
-    // Ignore border from minimap
-    this.minimapCamera.ignore(borderGraphics)
+    this.minimapCamera.ignore(this.minimapBorder)
 
     // Add label
-    const label = this.add.text(
+    this.minimapLabel = this.add.text(
       gameWidth - MINIMAP_SIZE / 2 - MINIMAP_MARGIN,
-      gameHeight - MINIMAP_SIZE - MINIMAP_MARGIN - 20,
+      gameHeight - MINIMAP_SIZE - MINIMAP_MARGIN - 18,
       'MINIMAP',
       {
-        fontSize: '14px',
-        color: '#8888aa',
+        fontSize: '12px',
+        color: '#c9aa71',
         fontFamily: 'Arial',
       }
     ).setOrigin(0.5)
-    label.setScrollFactor(0)
-    label.setDepth(101)
-    this.minimapCamera.ignore(label)
+    this.minimapLabel.setScrollFactor(0)
+    this.minimapLabel.setDepth(101)
+    this.minimapCamera.ignore(this.minimapLabel)
   }
 
   createClickIndicator(x: number, y: number) {
@@ -253,7 +426,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   moveTo(x: number, y: number) {
-    // Clamp to map bounds
     this.targetX = Phaser.Math.Clamp(x, 50, MAP_WIDTH - 50)
     this.targetY = Phaser.Math.Clamp(y, 50, MAP_HEIGHT - 50)
     this.isMoving = true
@@ -263,7 +435,6 @@ export default class GameScene extends Phaser.Scene {
     this.updateMovement()
     this.updateAnimation()
 
-    // Update minimap marker position
     if (this.championMarker) {
       this.championMarker.setPosition(this.champion.x, this.champion.y)
     }
@@ -282,7 +453,6 @@ export default class GameScene extends Phaser.Scene {
         (dy / distance) * this.moveSpeed
       )
 
-      // Face direction
       if (dx < 0) {
         this.champion.setFlipX(true)
       } else {
