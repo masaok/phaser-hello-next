@@ -5,7 +5,7 @@
  */
 
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 // This fixes "Error: HTMLVideoElement is not defined"
 const HelloGame = dynamic(() => import('../../games/HelloGame'), {

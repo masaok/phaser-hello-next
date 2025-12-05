@@ -9,7 +9,6 @@ import { useEffect } from 'react'
 import { Game, AUTO } from 'phaser'
 
 import PhaserLogoScene from '@/scenes/PhaserLogoScene'
-import HelloWorldScene from '@/scenes/HelloWorldScene'
 
 const PhaserLogoGame = () => {
   useEffect(() => {

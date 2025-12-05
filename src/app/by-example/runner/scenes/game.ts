@@ -119,7 +119,7 @@ between the player and the coins. The key part there is to set a function that w
     /*
     We use the `pointerdown` event to listen to the mouse click or touch event.
     */
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.jump(), this)
+    this.input.on('pointerdown', () => this.jump(), this)
 
     /*
     We use `updateScoreEvent` to update the score every 100ms so the player can see the score increasing as long as he survives.

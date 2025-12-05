@@ -12,9 +12,9 @@ class SpaceBarScene extends Scene {
   }
 
   create() {
-    const jelly1 = this.add.image(150, 400, 'jellies', 'WithShadow/Jelly1').setScale(0.5)
-    const jelly2 = this.add.image(400, 400, 'jellies', 'WithShadow/Jelly2').setScale(0.5)
-    const jelly3 = this.add.image(650, 400, 'jellies', 'WithShadow/Jelly3').setScale(0.5)
+    this.add.image(150, 400, 'jellies', 'WithShadow/Jelly1').setScale(0.5)
+    this.add.image(400, 400, 'jellies', 'WithShadow/Jelly2').setScale(0.5)
+    this.add.image(650, 400, 'jellies', 'WithShadow/Jelly3').setScale(0.5)
 
     const bubble1 = this.createSpeechBubble(20, 180, 220, 80, 'Global Handler!')
     const bubble2 = this.createSpeechBubble(290, 180, 220, 80, 'Global Key Code!')
@@ -32,9 +32,7 @@ class SpaceBarScene extends Scene {
     //  Emits only when the SPACE BAR is pressed down, and dispatches from the local Key object.
     //  You can call stopPropagation at this level, which will stop it reaching both listeners below.
 
-    spaceKey?.on('down', (key: Phaser.Input.Keyboard.Key, event: KeyboardEvent) => {
-      // event.stopPropagation();
-
+    spaceKey?.on('down', () => {
       bubble3.setVisible(true)
     })
 
